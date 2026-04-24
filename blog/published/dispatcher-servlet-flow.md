@@ -348,19 +348,25 @@ Host: localhost:8080
 
 ## 주의사항
 
-### DispatcherServlet은 Servlet일 뿐이다
+### DispatcherServlet은 Spring 전용 특수 객체가 아니다
+
+> 오해: "Spring이 만든 특수한 무언가"  
+> 실제: Servlet 인터페이스를 구현한 평범한 클래스 — Tomcat은 그냥 `doGet()`을 호출할 뿐
 
 ```
 Tomcat이 HTTP를 받음
     ↓
-DispatcherServlet.doGet() 호출 (Servlet 인터페이스)
+DispatcherServlet.doGet() 호출 (Servlet 인터페이스 — Tomcat 입장에선 그냥 Servlet)
     ↓
-그 안에서 Spring의 마법 (HandlerMapping, Controller, etc.)
+그 안에서 Spring의 처리 (HandlerMapping → Controller → HttpMessageConverter)
 ```
 
-DispatcherServlet 자체는 비즈니스 로직을 몰라요. 단지 **요청을 받아서 Spring에 넘기고, Spring의 응답을 HTTP로 변환할 뿐**입니다.
+DispatcherServlet 자체는 비즈니스 로직을 몰라요. **Tomcat과 Spring 사이의 번역기** — HTTP 요청을 Spring에 넘기고, Spring의 결과를 HTTP 응답으로 돌려줄 뿐입니다.
 
-### 모든 요청이 한 번에 처리되지 않는다
+### 인스턴스는 1개지만, 요청은 동시에 처리된다
+
+> 오해: "DispatcherServlet이 하나니까 요청을 하나씩 순서대로 처리하겠지"  
+> 실제: 스레드별로 독립 실행 — Stateless이기 때문에 가능
 
 ```
 요청 A (Thread-1)  GET /users/123     → UserController.getUser()
@@ -368,7 +374,7 @@ DispatcherServlet 자체는 비즈니스 로직을 몰라요. 단지 **요청을
 요청 C (Thread-3)  GET /products/456  → ProductController.get()
 
 → 세 요청이 DispatcherServlet을 동시에 지나감 (각각 다른 스레드)
-→ DispatcherServlet 인스턴스는 1개이지만 동시 처리 가능 (Servlet 설계)
+→ DispatcherServlet은 상태(state)를 갖지 않으므로 동시 처리해도 충돌 없음
 ```
 
 ---
