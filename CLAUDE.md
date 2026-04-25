@@ -11,6 +11,7 @@ klid-middlewares(업무 레포)와 분리되어 있음.
 - `blog/published/` — 발행 완료된 글
 - `jvm-training/` — JVM 트레이닝 시리즈 및 로드맵
 - `db-internals/` — DB Internals 트레이닝 시리즈 및 로드맵
+- `glossary/` — 용어집 (주제별 개념 정의, 트레이닝/블로그와 연결)
 - `spring/` — Spring 학습 노트
 - `java/` — Java 학습 노트
 - `book/` — 기술 서적 독서 노트
@@ -28,6 +29,12 @@ klid-middlewares(업무 레포)와 분리되어 있음.
 - `jvm-training/`, `db-internals/` — 문서 생성 직후 Claude가 Q1(기본) 질문 1개를 즉시 던진다
 - 트레이닝 문서는 이해도 테스트 3단계를 통과해야 Phase 완료로 인정한다
 - 지호님이 답하지 않으면 문서는 생성됐지만 학습은 시작도 안 된 것으로 간주한다
+
+### 용어집(glossary/) 관리 규칙
+- 트레이닝/블로그 중 "이게 뭔지 모르겠다" 싶은 개념이 나오면 `glossary/`에 단독 파일로 정리한다
+- 파일명은 개념명 소문자 영어로 (예: `buffer.md`, `transaction.md`)
+- 트레이닝 문서에서 해당 개념이 등장하면 glossary 링크로 연결한다
+- 블로그 주제로 키우기엔 작지만, 그냥 흘려보내기엔 중요한 개념들을 여기에 쌓는다
 
 ---
 
