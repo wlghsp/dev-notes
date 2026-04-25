@@ -2,7 +2,7 @@
 ## "내부 구조를 이해하는 개발자 되기"
 
 > 특정 DB 문서를 외우는 게 목표가 아니다. **왜 이렇게 동작하는지 설명할 수 있는 수준**이 목표다.
-> 각 Phase는 실습 → 읽기 → 피드백 → 블로그 발행 → 발표 순서를 반드시 지킨다.
+> 각 Phase는 문서 읽기 → 실습 → 이해도 테스트 → 블로그 발행 순서를 지킨다.
 
 ---
 
@@ -20,9 +20,10 @@
 ## Phase 구성 전략
 
 ```
-Phase 0~3 : DB 공통 내부 원리 (특정 제품에 종속되지 않는 개념)
-Phase 4~5 : MySQL/MariaDB 기반 심화 실습
-Phase 6   : 실전 트러블슈팅
+Phase 0~4 : DB 공통 내부 원리 (특정 제품에 종속되지 않는 개념)
+             → Database Internals (Alex Petrov) Part I 기반
+Phase 5~6 : MySQL/MariaDB 기반 심화 실습
+Phase 7   : 실전 트러블슈팅
 ```
 
 ---
@@ -31,61 +32,76 @@ Phase 6   : 실전 트러블슈팅
 
 | Phase | 주제 | 실습 | 블로그 발행 | 발표 |
 |---|---|---|---|---|
-| 0 | 스토리지 기초 — 데이터는 디스크에 어떻게 저장되는가 | ⬜ | ⬜ | ⬜ |
-| 1 | 자료구조 — B-Tree vs LSM-Tree | ⬜ | ⬜ | ⬜ |
-| 2 | 인덱스 내부 구조 | ⬜ | ⬜ | ⬜ |
-| 3 | 트랜잭션 & MVCC | ⬜ | ⬜ | ⬜ |
-| 4 | WAL & Crash Recovery | ⬜ | ⬜ | ⬜ |
-| 5 | 쿼리 실행 엔진 & 옵티마이저 | ⬜ | ⬜ | ⬜ |
-| 6 | 실전 트러블슈팅 | ⬜ | ⬜ | ⬜ |
+| 0 | 스토리지 기초 — Page, Buffer Pool, I/O | ⬜ | ⬜ | ⬜ |
+| 1 | DBMS 아키텍처 — Storage Engine은 어떻게 구성되는가 | ⬜ | ⬜ | ⬜ |
+| 2 | B-Tree 내부 구조 — 왜 DB는 B-Tree를 선택했는가 | ⬜ | ⬜ | ⬜ |
+| 3 | LSM-Tree — 쓰기 최적화 구조의 원리 | ⬜ | ⬜ | ⬜ |
+| 4 | 트랜잭션 & MVCC | ⬜ | ⬜ | ⬜ |
+| 5 | WAL & Crash Recovery | ⬜ | ⬜ | ⬜ |
+| 6 | 인덱스 내부 구조 & 쿼리 실행 엔진 | ⬜ | ⬜ | ⬜ |
+| 7 | 실전 트러블슈팅 | ⬜ | ⬜ | ⬜ |
 
 ---
 
 ## 각 Phase 상세
 
 ### Phase 0: 스토리지 기초 — 데이터는 디스크에 어떻게 저장되는가
-**파일**: `db-storage-basics.md` (미작성)
+**파일**: [`db-storage-basics.md`](db-storage-basics.md)
 **완료 기준**: "Page가 뭔지, Buffer Pool이 왜 필요한지 동료에게 5분 설명 가능"
 **핵심 질문**:
 - 왜 DB는 바이트 단위가 아닌 Page 단위로 읽고 쓰는가?
 - Disk I/O가 왜 병목인가? Random I/O vs Sequential I/O의 차이는?
-- Buffer Pool(캐시)이 없으면 무슨 일이 생기는가?
+- Buffer Pool이 없으면 무슨 일이 생기는가?
+- Dirty Page를 즉시 디스크에 쓰지 않는 이유는?
 **실습**:
 - MySQL `innodb_page_size` 확인 + 실제 `.ibd` 파일 크기 관찰
+- `SHOW ENGINE INNODB STATUS`로 Buffer Pool hit rate 확인
 - `innodb_buffer_pool_size` 조정 전후 쿼리 속도 비교
 
 ---
 
-### Phase 1: 자료구조 — B-Tree vs LSM-Tree
-**파일**: `db-btree-vs-lsmtree.md` (미작성)
-**완료 기준**: "왜 MySQL은 B-Tree를 쓰고, Cassandra는 LSM-Tree를 쓰는지 트레이드오프로 설명 가능"
+### Phase 1: DBMS 아키텍처 — Storage Engine은 어떻게 구성되는가
+**파일**: `db-dbms-architecture.md` (미작성)
+**완료 기준**: "쿼리가 들어와서 결과가 나올 때까지 어떤 컴포넌트를 거치는지 그림으로 설명 가능"
 **핵심 질문**:
-- B-Tree는 읽기에 유리하고 LSM-Tree는 쓰기에 유리하다 — 왜?
-- B-Tree에서 삽입이 느려지는 경우는 언제인가? (Page split)
-- LSM-Tree의 Compaction이란?
+- DBMS는 어떤 컴포넌트로 구성되는가? (Transport → Query Processor → Execution Engine → Storage Engine)
+- Storage Engine 내부의 Transaction Manager / Lock Manager / Buffer Manager / Recovery Manager는 각각 무슨 역할인가?
+- Row-oriented vs Column-oriented DB의 차이는? 언제 어느 쪽이 유리한가?
+- In-memory DB와 Disk-based DB는 어떻게 다른가?
 **실습**:
-- MySQL에서 B-Tree 인덱스 페이지 구조를 `innodb_space` 도구로 시각화
-- 같은 대량 삽입을 인덱스 있을 때 / 없을 때 시간 비교
-**참고 DB**: MySQL/MariaDB (B-Tree), RocksDB/Cassandra 개념 비교
+- MySQL에서 Storage Engine 목록 확인 (`SHOW ENGINES`)
+- InnoDB vs MyISAM 기본 특성 비교
+- `EXPLAIN`으로 쿼리가 어떤 경로로 실행되는지 관찰
 
 ---
 
-### Phase 2: 인덱스 내부 구조
-**파일**: `db-index-internals.md` (미작성)
-**완료 기준**: "`EXPLAIN` 결과를 보고 실행 계획과 인덱스 사용 여부를 예측할 수 있음"
+### Phase 2: B-Tree 내부 구조 — 왜 DB는 B-Tree를 선택했는가
+**파일**: `db-btree-internals.md` (미작성)
+**완료 기준**: "B-Tree 노드가 Page와 어떻게 연결되는지, 삽입 시 Page split이 왜 일어나는지 설명 가능"
 **핵심 질문**:
-- Clustered Index vs Secondary Index의 차이는?
-- Index Selectivity가 낮으면 왜 인덱스를 타지 않는가?
-- Covering Index란 무엇이고 왜 빠른가?
-- Composite Index에서 순서가 왜 중요한가?
+- B-Tree는 왜 Binary Search Tree가 아닌가? 디스크 구조와 어떻게 맞물리는가?
+- B-Tree 노드(Page)에 데이터가 가득 찼을 때 무슨 일이 일어나는가? (Page split)
+- B-Tree에서 삭제 시 Page merge는 언제 발생하는가?
+- B+Tree와 B-Tree의 차이는? MySQL은 왜 B+Tree를 쓰는가?
 **실습**:
-- `EXPLAIN ANALYZE`로 Full Scan vs Index Scan 직접 비교
-- Covering Index 적용 전후 성능 측정
-- Composite Index 순서 바꿔서 실행 계획 변화 확인
+- 대량 순차 삽입 vs 랜덤 삽입 성능 비교 (Page split 영향 확인)
+- `innodb_space` 도구로 B-Tree 페이지 구조 시각화
 
 ---
 
-### Phase 3: 트랜잭션 & MVCC
+### Phase 3: LSM-Tree — 쓰기 최적화 구조의 원리
+**파일**: `db-lsm-tree.md` (미작성)
+**완료 기준**: "B-Tree와 LSM-Tree의 트레이드오프를 workload 관점에서 설명 가능"
+**핵심 질문**:
+- LSM-Tree는 왜 쓰기가 빠른가? (Sequential Write, Memtable)
+- SSTable이란 무엇인가?
+- Compaction이란 무엇이고 왜 필요한가?
+- Write-heavy 서비스에서 B-Tree 대신 LSM-Tree를 선택하는 기준은?
+**참고 DB**: RocksDB, Cassandra, LevelDB 개념 비교 (MySQL은 RocksDB 기반 MyRocks도 지원)
+
+---
+
+### Phase 4: 트랜잭션 & MVCC
 **파일**: `db-transaction-mvcc.md` (미작성)
 **완료 기준**: "MVCC가 어떻게 Lock 없이 일관된 읽기를 제공하는지 그림으로 설명 가능"
 **핵심 질문**:
@@ -100,7 +116,7 @@ Phase 6   : 실전 트러블슈팅
 
 ---
 
-### Phase 4: WAL & Crash Recovery
+### Phase 5: WAL & Crash Recovery
 **파일**: `db-wal-crash-recovery.md` (미작성)
 **완료 기준**: "서버가 갑자기 꺼져도 데이터가 보존되는 이유를 WAL 흐름으로 설명 가능"
 **핵심 질문**:
@@ -115,22 +131,23 @@ Phase 6   : 실전 트러블슈팅
 
 ---
 
-### Phase 5: 쿼리 실행 엔진 & 옵티마이저
-**파일**: `db-query-optimizer.md` (미작성)
-**완료 기준**: "옵티마이저가 실행 계획을 고르는 기준을 설명하고, 잘못된 선택을 강제로 바꿀 수 있음"
+### Phase 6: 인덱스 내부 구조 & 쿼리 실행 엔진
+**파일**: `db-index-and-query.md` (미작성)
+**완료 기준**: "`EXPLAIN ANALYZE` 결과를 보고 실행 계획을 예측하고, 잘못된 선택을 강제로 바꿀 수 있음"
 **핵심 질문**:
-- 쿼리가 실행되기까지 어떤 단계를 거치는가? (Parse → Optimize → Execute)
+- Clustered Index vs Secondary Index의 차이는?
+- Covering Index란 무엇이고 왜 빠른가?
 - 옵티마이저는 어떤 통계 정보를 보고 실행 계획을 결정하는가?
-- Join 알고리즘의 종류와 각각이 유리한 상황은? (Nested Loop, Hash Join, Sort Merge)
+- Join 알고리즘의 종류와 각각이 유리한 상황은? (Nested Loop, Hash Join)
 - Statistics가 오래되면 왜 잘못된 실행 계획이 나오는가?
 **실습**:
-- `EXPLAIN FORMAT=JSON`으로 실행 계획 상세 분석
+- `EXPLAIN ANALYZE`로 Full Scan vs Index Scan vs Covering Index 비교
 - `ANALYZE TABLE`로 통계 갱신 전후 실행 계획 비교
 - `USE INDEX` / `FORCE INDEX`로 실행 계획 강제 변경
 
 ---
 
-### Phase 6: 실전 트러블슈팅
+### Phase 7: 실전 트러블슈팅
 **파일**: `db-troubleshooting.md` (미작성)
 **완료 기준**: "슬로우 쿼리 로그를 받아서 병목 지점을 찾고 개선 방향을 제시할 수 있음"
 **핵심 질문**:
@@ -144,9 +161,6 @@ Phase 6   : 실전 트러블슈팅
 
 ---
 
-## 지금 당장 할 것
-
-**Phase 0 시작** — 스토리지 기초부터
-- "Page가 뭔지" 한 문장으로 설명해보기
-- MySQL 설치 + `innodb_page_size` 확인
-- Claude에게 피드백 → 문서 작성 → 블로그 발행
+## 참고 자료
+- *Database Internals* — Alex Petrov (O'Reilly, 2019) : Part I Storage Engines 기반
+- MySQL 8.0 Reference Manual
