@@ -221,11 +221,11 @@ row 3건 수정 → 즉시 디스크 쓰기
 
 ```mermaid
 graph TD
-    APP["애플리케이션\n(쿼리 요청)"]
-    SE["Storage Engine\n(InnoDB)"]
-    BP["Buffer Pool\n(메모리)"]
-    LOG["Redo Log\n(WAL)"]
-    DATA["Data Files\n(.ibd)"]
+    APP["애플리케이션<br/>(쿼리 요청)"]
+    SE["Storage Engine<br/>(InnoDB)"]
+    BP["Buffer Pool<br/>(메모리)"]
+    LOG["Redo Log<br/>(WAL)"]
+    DATA["Data Files<br/>(.ibd)"]
 
     APP --> SE
     SE --> BP
