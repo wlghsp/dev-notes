@@ -28,9 +28,15 @@ DB의 데이터는 결국 디스크에 있다. 쿼리가 느린 이유의 대부
 
 ## 2. Page — DB의 기본 I/O 단위
 
-디스크는 물리적으로 데이터를 **블록(block)** 단위로 읽고 쓴다. 1바이트만 필요해도 블록 하나를 통째로 읽어야 한다.
+디스크는 물리적으로 데이터를 **블록(block)** 단위로 읽고 쓴다. 1바이트만 필요해도 블록 하나를 통째로 읽어야 한다. 이건 하드웨어 설계상 어쩔 수 없는 제약이다.
 
-DB는 이 특성을 활용해서 자체적인 단위인 **Page**를 정의한다.
+그런데 여기서 중요한 사실이 있다: **디스크 I/O는 "얼마나 많이 읽냐"가 아니라 "몇 번 읽냐"가 비용이다.**
+
+HDD 기준으로 디스크 I/O 1회 비용의 대부분은 헤드가 해당 위치로 이동하는 seek time이다. 실제 데이터를 전송하는 시간은 그것에 비하면 미미하다. SSD도 마찬가지로 I/O 요청 자체의 레이턴시가 지배적이다.
+
+결론: **4KB를 읽든 16KB를 읽든 I/O 1회 비용은 거의 같다.**
+
+DB는 이 특성을 이용해서 자체적인 단위인 **Page**를 정의한다.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -45,18 +51,29 @@ DB는 이 특성을 활용해서 자체적인 단위인 **Page**를 정의한다
 └─────────────────────────────────────────┘
 ```
 
-**왜 바이트 단위가 아닌 Page 단위인가?**
+**왜 Page 크기를 16KB로 정했는가?**
 
-- 디스크 I/O는 요청 횟수가 비용이다. 1바이트를 읽든 16KB를 읽든 I/O 1회 비용은 거의 같다.
-- 어차피 한 번 디스크에 접근할 때 Page 통째로 읽어오면, 근처 row를 조회할 때 추가 I/O 없이 재사용할 수 있다.
-- 인덱스 구조(B-Tree)도 Page 단위로 노드를 구성한다 → Phase 1에서 다룸
+어차피 I/O 1회 비용이 같다면, 한 번 읽을 때 더 많이 읽어오는 게 이득이다. 하지만 무작정 크게 하면 안 된다:
+
+| Page 크기 | 문제 |
+|-----------|------|
+| 너무 작음 (4KB) | row 하나 읽었는데 근처 row 조회 시 또 I/O 발생 |
+| 너무 큼 (1MB) | row 1개 때문에 1MB를 Buffer Pool(메모리)에 올려야 함 → 메모리 낭비 |
+| **16KB (InnoDB 기본)** | row 여러 개를 한 번에 올리고, 근처 row 재사용 — I/O 최소화 + 메모리 효율 균형 |
+
+16KB는 1990년대 말 InnoDB 설계 당시 서버 메모리(256MB~1GB)와 일반적인 row 크기(수백 바이트)를 기준으로 실험적으로 정착된 값이다. PostgreSQL은 8KB, SQL Server는 8KB로 DB마다 다르지만, 이후 메모리가 충분히 저렴해지면서 InnoDB의 16KB가 균형점으로 검증됐다.
+
+**핵심 정리:**
+- Disk Block은 하드웨어가 강제하는 최소 단위 (DB가 선택할 수 없음)
+- DB Page는 그 위에서 DB가 효율을 위해 선택한 단위 (I/O 횟수를 줄이기 위한 전략)
+- 인덱스 구조(B-Tree)도 Page 단위로 노드를 구성한다 — B-Tree가 Page와 어떻게 맞물리는지는 Phase 1에서 다루지만, 지금은 "Page 하나 = 인덱스 트리의 노드 하나"라는 것만 기억해두면 된다
 
 MySQL InnoDB의 기본 Page 크기는 **16KB**다.
 
 ```sql
 SHOW VARIABLES LIKE 'innodb_page_size';
--- 결과: 16384 (bytes = 16KB)
 ```
+> ![innodb_page_size 실행 결과](../assets/db-internals/innodb-page-size.png)
 
 ---
 
@@ -81,8 +98,26 @@ Random I/O (랜덤 읽기)
 - **Full Table Scan**: Sequential I/O → 데이터가 많아도 예측 가능한 속도
 - **Index Scan (비효율적)**: Random I/O → 인덱스가 있어도 느릴 수 있음
 
-"인덱스가 있는데 왜 Full Scan이 더 빠르지?"라는 상황이 생기는 이유가 여기에 있다.
-Selectivity가 낮은 인덱스 → Random I/O가 너무 많이 발생 → Full Scan이 오히려 빠름.
+**"인덱스가 있는데 왜 Full Scan이 더 빠르지?"**
+
+이게 처음엔 직관에 반한다. 이유는 **Selectivity(선택도)** 개념으로 설명된다.
+
+Selectivity = 인덱스 조건이 전체 row 중 얼마나 걸러내는가.
+
+```
+Selectivity 높음 (인덱스가 유리한 경우)
+  SELECT * FROM orders WHERE order_id = 9999;
+  → 1억 건 중 1건만 반환 → Random I/O 1회 → 인덱스가 압도적으로 유리
+
+Selectivity 낮음 (Full Scan이 유리한 경우)
+  SELECT * FROM orders WHERE status = 'PENDING';
+  → 1억 건 중 3,000만 건 반환
+  → 인덱스를 타면: 3,000만 번 Random I/O (각각 다른 Page로 점프)
+  → Full Scan이면: Page를 처음부터 끝까지 Sequential I/O 1회
+  → Full Scan이 오히려 빠름
+```
+
+MySQL 옵티마이저는 이 판단을 통계 기반으로 자동으로 한다. `EXPLAIN`에서 `type: ALL`(Full Scan)이 나올 때 무조건 나쁜 게 아니라, Selectivity가 낮아서 옵티마이저가 의도적으로 선택한 경우일 수 있다.
 
 ---
 
@@ -111,12 +146,25 @@ flowchart TD
 
 따라서 **Buffer Pool 크기 = DB 성능에 직접적인 영향**.
 
-MySQL InnoDB 기본값은 128MB인데, 실제 운영 환경에서는 가용 메모리의 70~80%까지 잡는 게 일반적이다.
+MySQL InnoDB 기본값은 128MB다. 실제 운영 환경에서는 가용 메모리의 **70~80%** 를 잡는 게 일반적인 권장값이다.
+
+왜 70~80%인가? 100%를 주면 안 되는 이유가 있다:
+
+```
+서버 메모리 = Buffer Pool + 나머지
+                              ├── OS 커널
+                              ├── MySQL 프로세스 자체 (연결 관리, 정렬 버퍼 등)
+                              ├── Redo Log 버퍼
+                              └── 기타 스레드 스택
+
+→ Buffer Pool에 100% 주면 OS와 MySQL 자체가 메모리 부족으로 죽음
+→ 70~80%는 "Buffer Pool에 최대한 주되, 나머지가 굶지 않는" 경험적 균형점
+```
 
 ```sql
 SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
--- 기본값: 134217728 (128MB)
 ```
+> 📷 **[직접 실행 결과 캡쳐 첨부]**
 
 ---
 
@@ -147,8 +195,25 @@ sequenceDiagram
 ```
 
 **Dirty Page**: 메모리에서 수정됐지만 아직 디스크에 반영되지 않은 Page.
-DB는 성능을 위해 수정 즉시 디스크에 쓰지 않는다. 대신 주기적으로 묶어서 씀 (Checkpoint).
-이 구조가 Crash Recovery와 연결된다 → Phase 4에서 다룸.
+
+DB는 수정이 발생해도 즉시 디스크에 쓰지 않는다. 왜냐하면:
+
+```
+row 1건 수정 → 즉시 디스크 쓰기
+row 2건 수정 → 즉시 디스크 쓰기
+row 3건 수정 → 즉시 디스크 쓰기
+...
+→ 수정 1번마다 Disk I/O 1번 → 너무 느림
+
+대신:
+수정 발생 → 메모리(Buffer Pool)에만 반영 → Dirty Page로 표시
+수정 발생 → 메모리에만 반영 → Dirty Page
+...
+→ Checkpoint 시점에 Dirty Page 모아서 한 번에 디스크에 씀 → I/O 횟수 최소화
+```
+
+단, 여기서 문제가 생긴다. 메모리에만 있는 수정 내용이 서버가 갑자기 꺼지면 사라진다.
+이걸 막기 위해 **Redo Log(WAL)** 가 존재한다 — 수정 내용을 디스크의 로그 파일에 먼저 순차적으로 기록해두고, 장애 시 이 로그로 복구한다. 이 구조가 Crash Recovery의 핵심이다 → Phase 4에서 상세히 다룬다.
 
 ---
 
@@ -182,27 +247,25 @@ graph TD
 SHOW VARIABLES LIKE 'innodb_page_size';
 SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
 ```
+> 📷 **[직접 실행 결과 캡쳐 첨부]**
 
 ### 실습 2: Buffer Pool 상태 확인
 ```sql
 SHOW ENGINE INNODB STATUS\G
--- "BUFFER POOL AND MEMORY" 섹션 확인
--- Buffer pool hit rate가 얼마인지 본다 (정상: 999/1000 이상)
 ```
+> 📷 **["BUFFER POOL AND MEMORY" 섹션 캡쳐 첨부 — Buffer pool hit rate 수치 포함]**
 
 ### 실습 3: .ibd 파일 크기 관찰
 ```bash
-# MySQL 데이터 디렉토리에서 실제 파일 확인
 ls -lh /var/lib/mysql/{database_name}/
-# .ibd 파일이 16KB 배수로 증가하는 것을 확인
 ```
+> 📷 **[.ibd 파일 목록 캡쳐 첨부 — 파일 크기가 16KB 배수인지 확인]**
 
 ### 실습 4: Buffer Pool 크기 변경 후 성능 비교
 ```sql
--- 테스트 테이블 생성 후 대량 데이터 삽입
--- Buffer Pool을 작게 줄였을 때 vs 크게 늘렸을 때 쿼리 시간 비교
 SET GLOBAL innodb_buffer_pool_size = 32 * 1024 * 1024;  -- 32MB로 줄이기
 ```
+> 📷 **[Buffer Pool 축소 전/후 쿼리 실행 시간 비교 캡쳐 첨부]**
 
 ---
 
@@ -212,6 +275,8 @@ SET GLOBAL innodb_buffer_pool_size = 32 * 1024 * 1024;  -- 32MB로 줄이기
 - [ ] Buffer Pool hit rate를 `SHOW ENGINE INNODB STATUS`에서 찾았다
 - [ ] "왜 Page 단위인가"를 한 문장으로 설명할 수 있다
 - [ ] "Buffer Pool Miss가 왜 느린가"를 설명할 수 있다
+- [ ] "Selectivity가 낮으면 왜 Full Scan이 더 빠른가"를 설명할 수 있다
+- [ ] "Dirty Page를 즉시 디스크에 쓰지 않는 이유"를 설명할 수 있다
 
 ---
 
