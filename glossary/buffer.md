@@ -32,5 +32,32 @@ Disk 속도: ~10 ms
 
 ---
 
+## DB에서의 버퍼: Buffer Pool
+
+MySQL InnoDB의 Buffer Pool은 이 개념의 대표적인 구현체다.
+
+```
+애플리케이션
+     ↓
+Storage Engine
+     ↓
+Buffer Pool (메모리) ← 여기서 찾으면 Hit, 없으면 Miss
+     ↓ Miss
+  .ibd 파일 (디스크)
+```
+
+- **Hit**: 메모리에서 바로 반환 — 디스크 접근 없음
+- **Miss**: 디스크에서 Page(16KB)를 읽어 Buffer Pool에 올린 후 반환
+
+버퍼가 클수록 Hit율이 올라가고 I/O가 줄어든다. 운영 환경에서 가용 메모리의 70~80%를 Buffer Pool에 할당하는 이유가 이것이다.
+
+```sql
+-- Buffer Pool 크기 확인
+SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
+
+-- Hit율 확인 (BUFFER POOL AND MEMORY 섹션)
+SHOW ENGINE INNODB STATUS\G
+```
+
 ## 관련 개념
-- [DB Buffer Pool](../db-internals/db-storage-basics.md#4-buffer-pool--디스크를-덜-읽기-위한-핵심-장치)
+- [DB Buffer Pool 상세](../db-internals/db-storage-basics.md#4-buffer-pool--디스크를-덜-읽기-위한-핵심-장치)
