@@ -16,17 +16,30 @@ DBMS 내부 컴포넌트 구조를 알면 **병목이 어디서 생기는지**, 
 ```mermaid
 graph TD
     CLIENT["클라이언트<br/>(Application)"]
+    NODE["다른 DB 노드<br/>(클러스터)"]
 
     subgraph DBMS["DBMS"]
         direction TB
-        TRANSPORT["Transport Layer<br/>(연결 관리 / 프로토콜)"]
-        QP["Query Processor<br/>(Parser → Optimizer → Planner)"]
-        EE["Execution Engine<br/>(실행 계획 실행)"]
+
+        subgraph TRANSPORT["Transport Layer"]
+            CC["Cluster Communication"]
+            CL["Client Communication"]
+        end
+
+        subgraph QP["Query Processor"]
+            PARSER["Query Parser"]
+            OPT["Query Optimizer"]
+        end
+
+        subgraph EE["Execution Engine"]
+            RE["Remote Execution"]
+            LE["Local Execution"]
+        end
 
         subgraph SE["Storage Engine"]
-            direction TB
             TM["Transaction Manager"]
-            LM["Lock Manager"]
+            LK["Lock Manager"]
+            AM["Access Methods<br/>(B-Tree / LSM-Tree)"]
             BM["Buffer Manager"]
             RM["Recovery Manager"]
         end
@@ -34,11 +47,15 @@ graph TD
 
     DISK["Disk<br/>(Data Files / Log Files)"]
 
-    CLIENT -->|SQL| TRANSPORT
+    CLIENT -->|SQL| CL
+    NODE <-->|replication / cluster| CC
     TRANSPORT --> QP
     QP -->|실행 계획| EE
-    EE --> SE
-    SE -->|Page I/O| DISK
+    RE <-->|분산 쿼리| NODE
+    LE --> SE
+    AM -->|Page I/O| DISK
+    BM -->|캐시| AM
+    RM -->|WAL| DISK
 
     style TRANSPORT fill:#8e44ad,color:#fff
     style QP fill:#2980b9,color:#fff
@@ -64,11 +81,15 @@ graph TD
 
 ## 2. Transport Layer
 
-클라이언트와 DBMS 사이의 연결을 담당하는 레이어다.
+DBMS는 client/server 모델로 동작한다. 클라이언트(애플리케이션)가 요청을 보내면 서버(DB 인스턴스, 즉 node)가 처리한다. Transport Layer는 이 요청이 들어오고 나가는 관문이다.
 
-- 프로토콜 처리: MySQL Wire Protocol, PostgreSQL Frontend/Backend Protocol
-- 연결 관리: Thread per connection (MySQL 기본) 또는 Connection Pool
-- 인증 처리
+Transport Layer는 두 가지 통신을 담당한다.
+
+**Client Communication** — 애플리케이션에서 오는 SQL 쿼리를 받는다. MySQL Wire Protocol, PostgreSQL Frontend/Backend Protocol 같은 DB 전용 프로토콜로 통신한다. 연결 수립, 인증, 세션 관리가 여기서 이루어진다.
+
+**Cluster Communication** — 분산 DB 환경에서 다른 노드와 통신한다. 복제(replication), 분산 쿼리 처리, 노드 간 데이터 전송이 이 채널을 통한다.
+
+쿼리가 도착하면 Transport Layer는 쿼리를 Query Processor에 넘긴다. 접근 제어(Access Control) 검사는 Parser가 쿼리의 의미를 해석한 이후에 이루어진다. 어떤 테이블과 컬럼에 접근하는지 알아야 권한 검사를 할 수 있기 때문이다.
 
 **Connection Pool이 왜 중요한가?**
 
@@ -79,8 +100,7 @@ graph TD
 쿼리 실행 자체: 수백 µs ~ 수 ms (캐시 히트 시)
 ```
 
-연결 수립이 쿼리보다 느릴 수 있다. 그래서 Connection Pool로 연결을 재사용한다.
-연결 고갈(Connection Pool Exhaustion)은 대표적인 운영 장애 원인이다.
+연결 수립이 쿼리 실행보다 오래 걸릴 수 있다. 요청마다 새 연결을 맺으면 이 비용이 계속 누적된다. Connection Pool은 연결을 미리 만들어두고 재사용해서 이 비용을 제거한다. Connection Pool이 고갈되면 새 요청이 연결을 기다리다 타임아웃이 나는데, 이것이 대표적인 운영 장애 원인이다.
 
 ---
 
@@ -103,85 +123,116 @@ flowchart LR
 ```
 
 ### Parser
-- SQL 문자열을 파싱해서 AST(Abstract Syntax Tree)로 변환
-- 문법 오류는 여기서 잡힘 (`You have an error in your SQL syntax...`)
 
-### Optimizer (핵심)
-- 동일한 결과를 내는 여러 실행 계획 중 **비용이 가장 낮은 것을 선택**
-- Cost-based Optimizer: 테이블 통계 정보(row 수, cardinality, 데이터 분포)를 기반으로 비용 계산
-- Full Scan vs Index Scan, Join 순서, Join 알고리즘 — 모두 Optimizer가 결정
+SQL 문자열을 받아서 파싱하고 검증한다. 구문 오류(syntactic)와 의미 오류(semantic) 모두 여기서 잡힌다. 구문 오류는 SQL 키워드가 잘못 쓰인 경우이고, 의미 오류는 존재하지 않는 테이블이나 컬럼을 참조하는 경우다.
 
-**Optimizer가 틀릴 수 있는 경우:**
-통계 정보가 오래됐거나 부정확하면 잘못된 실행 계획을 선택한다.
-→ `ANALYZE TABLE`로 통계 갱신, `FORCE INDEX`로 강제 변경 (Phase 6에서 상세히)
+검증을 통과한 SQL은 **AST(Abstract Syntax Tree)**로 변환된다. 이 트리가 이후 Optimizer에 넘어가는 내부 표현이다. 사람이 읽는 SQL 텍스트에서 DB가 다룰 수 있는 구조로 바뀌는 단계다.
+
+파싱 이후 접근 제어(Access Control) 검사도 이 시점에 이루어진다. 쿼리의 의미를 해석해야 어떤 권한이 필요한지 판단할 수 있기 때문이다.
+
+### Optimizer
+
+Optimizer는 DBMS에서 가장 복잡한 컴포넌트 중 하나다. Parser에서 넘어온 AST를 받아서 두 가지 일을 한다.
+
+첫째, **불가능하거나 중복된 연산을 제거한다.** 예를 들어 `WHERE 1=0` 같은 조건은 항상 거짓이므로 실행 자체를 생략할 수 있다.
+
+둘째, **가장 효율적인 실행 계획을 찾는다.** 같은 결과를 내는 실행 방법이 여러 가지 있을 때, Optimizer는 내부 통계(index cardinality, 예상 row 수, 데이터 분포)를 기반으로 각 방법의 비용을 추정하고 가장 낮은 비용의 계획을 선택한다.
+
+Optimizer가 다루는 선택지들:
+
+- 각 테이블을 Full Scan으로 읽을 것인가, Index Scan으로 읽을 것인가
+- Index Scan이라면 어떤 인덱스를 쓸 것인가
+- JOIN이 있을 때 어떤 알고리즘을 쓸 것인가 (Nested Loop, Hash Join, Sort Merge Join)
+- JOIN 순서는 어떻게 할 것인가 — Nested Loop에서는 순서가 성능에 큰 영향을 준다
+
+이 과정은 **dependency tree** 형태로 표현된다. 각 연산이 어떤 연산에 의존하는지 트리 구조로 나타내고, Optimizer는 이 트리를 탐색하면서 최적 조합을 찾는다.
+
+최종적으로 선택된 계획이 **execution plan (query plan)**이다. 실행해야 할 연산들의 순서와 방법이 담긴 명세서다.
+
+**Optimizer가 틀릴 수 있는 이유:**
+통계 정보는 실제 데이터 분포를 근사할 뿐이다. 통계가 오래됐거나 데이터 분포가 편향되어 있으면 잘못된 계획을 선택한다. `ANALYZE TABLE`로 통계를 갱신하거나 `FORCE INDEX`로 강제 변경할 수 있다 (Phase 6에서 상세히).
 
 ### Planner
-- Optimizer가 선택한 계획을 Execution Engine이 실행할 수 있는 형태로 직렬화
+
+Optimizer가 선택한 최적 실행 계획을 Execution Engine이 실제로 수행할 수 있는 형태로 변환한다. 논리적인 "무엇을 할지"를 물리적인 "어떻게 할지"로 바꾸는 단계다.
+
+예를 들어 Optimizer가 "Index Scan 후 Nested Loop Join"을 선택했다면, Planner는 그 계획을 Execution Engine이 순서대로 호출할 수 있는 연산 트리로 직렬화한다. Execution Engine은 이 트리를 위에서 아래로 실행한다.
 
 ---
 
 ## 4. Execution Engine
 
-실행 계획을 받아서 실제로 실행하는 레이어다.
+Optimizer가 만든 execution plan을 실제로 실행하는 컴포넌트다.
 
-- JOIN, SORT, AGGREGATION 등 연산 수행
-- Storage Engine API를 호출해서 데이터를 가져옴
-- 결과를 클라이언트에 스트리밍
+Execution Engine은 **Local Execution**과 **Remote Execution** 두 가지를 담당한다.
 
-Execution Engine은 Storage Engine의 내부를 모른다. 단순히 "row 줘"라고 API를 호출할 뿐이다. 이 분리가 MySQL Pluggable Storage Engine의 핵심이다.
+Local Execution은 현재 노드에서 직접 처리하는 쿼리다. Storage Engine API를 호출해서 데이터를 읽어오고, JOIN, SORT, AGGREGATION 같은 연산을 수행한 뒤 결과를 클라이언트에 돌려준다.
+
+Remote Execution은 분산 DB 환경에서 다른 노드에 있는 데이터를 읽거나 쓰는 경우다. 다른 노드로 하위 쿼리를 보내고 결과를 모아서 합친다.
+
+Execution Engine이 Storage Engine을 어떻게 다루는지가 중요하다. Execution Engine은 Storage Engine의 내부 구현을 전혀 모른다. "이 row 줘", "이 row 써" 같은 단순한 API만 호출한다. 이 분리 덕분에 MySQL에서 InnoDB, MyISAM, RocksDB 같은 Storage Engine을 교체해도 Execution Engine 코드는 바뀌지 않는다.
+
+결과적으로 Execution Engine의 성능은 두 가지에 달려 있다. Buffer Pool이 클수록 Storage Engine의 I/O가 줄어서 빠르다. Lock 경쟁이 심할수록 동시에 실행 가능한 연산 수가 줄어서 느려진다.
 
 ---
 
 ## 5. Storage Engine 내부 구조
 
-여기가 InnoDB가 동작하는 레이어다. 4개의 Manager로 구성된다.
+Local Execution에서 실제로 데이터를 읽고 쓰는 레이어다. InnoDB가 여기에 해당한다. 5개의 컴포넌트로 구성된다.
 
 ```mermaid
 graph TD
-    EE["Execution Engine"]
+    EE["Local Execution"]
 
     subgraph SE["Storage Engine (InnoDB)"]
-        TM["Transaction Manager<br/>ACID 보장, Isolation Level 관리"]
-        LM["Lock Manager<br/>Row Lock / Gap Lock / Table Lock"]
-        BM["Buffer Manager<br/>Buffer Pool 관리, Page Cache"]
-        RM["Recovery Manager<br/>Redo Log, Crash Recovery"]
+        TM["Transaction Manager<br/>논리적 무결성 보장"]
+        LK["Lock Manager<br/>물리적 무결성 보장"]
+        AM["Access Methods<br/>B-Tree / LSM-Tree"]
+        BM["Buffer Manager<br/>Buffer Pool"]
+        RM["Recovery Manager<br/>WAL / Redo Log"]
     end
 
     DATA["Data Files (.ibd)"]
-    LOG["Redo Log (WAL)"]
+    LOG["Redo Log"]
 
     EE --> TM
-    TM --> LM
-    TM --> BM
-    TM --> RM
+    EE --> LK
+    TM -.-|함께 동시성 제어| LK
+    EE --> AM
+    AM <-->|캐시 통해 접근| BM
     BM -->|Page I/O| DATA
     RM -->|Write-Ahead| LOG
 
     style TM fill:#e74c3c,color:#fff
-    style LM fill:#e67e22,color:#fff
+    style LK fill:#e67e22,color:#fff
+    style AM fill:#9b59b6,color:#fff
     style BM fill:#4a90d9,color:#fff
     style RM fill:#27ae60,color:#fff
 ```
 
 ### Transaction Manager
-- 트랜잭션 시작/커밋/롤백 관리
-- Isolation Level 적용 (READ COMMITTED, REPEATABLE READ 등)
-- MVCC(Multi-Version Concurrency Control) 조율 → Phase 4에서 상세히
+
+트랜잭션을 스케줄링하고 DB가 논리적으로 일관된 상태를 유지하도록 보장한다. 트랜잭션 시작/커밋/롤백을 관리하고, Isolation Level에 따라 어떤 데이터 버전을 보여줄지 결정한다. MVCC(Multi-Version Concurrency Control)가 여기서 조율된다 → Phase 4에서 상세히.
 
 ### Lock Manager
-- 동시성 제어를 위한 Lock 관리
-- Row Lock, Gap Lock, Next-Key Lock, Table Lock
-- Deadlock 감지 및 victim 선택
+
+실행 중인 트랜잭션을 위해 DB 오브젝트에 Lock을 걸어서 물리적 데이터 무결성을 보장한다. 동시에 실행되는 연산들이 서로 충돌하지 않도록 제어한다.
+
+Transaction Manager와 Lock Manager는 함께 **동시성 제어(Concurrency Control)**를 책임진다. Transaction Manager가 논리적 무결성(트랜잭션 간 격리)을, Lock Manager가 물리적 무결성(실제 데이터 블록 보호)을 각각 담당하고, 둘이 협력해서 완전한 동시성 제어를 구현한다.
+
+Lock의 종류: Row Lock, Gap Lock, Next-Key Lock, Table Lock. Deadlock 감지 및 victim 선택도 Lock Manager의 역할이다.
+
+### Access Methods
+
+디스크에서 데이터를 실제로 읽고 쓰는 방법을 구현한다. Heap file(정렬 없이 순서대로 쌓는 파일), B-Tree, LSM-Tree 같은 스토리지 구조가 여기에 속한다. Execution Engine은 "이 키로 row 찾아줘"라고 요청하고, Access Methods가 어떤 구조에서 어떻게 찾을지를 처리한다. B-Tree는 Phase 2에서, LSM-Tree는 Phase 3에서 상세히 다룬다.
 
 ### Buffer Manager
-- Phase 0에서 다룬 **Buffer Pool**이 여기에 있음
-- Disk에서 Page를 읽어와 메모리에 캐싱
-- Dirty Page 관리, LRU 기반 페이지 교체
+
+Phase 0에서 다룬 **Buffer Pool**이 여기에 있다. Disk에서 Page를 읽어서 메모리에 캐싱하고, Access Methods가 데이터를 요청하면 디스크 대신 메모리에서 제공한다. Dirty Page 관리, LRU 기반 페이지 교체, 캐시 eviction 정책을 담당한다.
 
 ### Recovery Manager
-- **WAL(Write-Ahead Log)** 관리 — Redo Log에 먼저 기록
-- Crash 후 재시작 시 Redo Log로 복구
-- Checkpoint 관리 → Phase 5에서 상세히
+
+장애 발생 시 DB를 일관된 상태로 복구하기 위해 **WAL(Write-Ahead Log)**을 유지한다. 데이터를 디스크에 쓰기 전에 Redo Log에 먼저 기록하는 것이 핵심 원칙이다. Crash 후 재시작 시 Redo Log를 재적용해서 복구한다. Checkpoint로 복구 범위를 줄인다 → Phase 5에서 상세히.
 
 ---
 
