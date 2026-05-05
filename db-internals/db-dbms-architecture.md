@@ -232,7 +232,7 @@ Phase 0에서 다룬 **Buffer Pool**이 여기에 있다. Disk에서 Page를 읽
 
 ### Recovery Manager
 
-장애 발생 시 DB를 일관된 상태로 복구하기 위해 **WAL(Write-Ahead Log)**을 유지한다. 데이터를 디스크에 쓰기 전에 Redo Log에 먼저 기록하는 것이 핵심 원칙이다. Crash 후 재시작 시 Redo Log를 재적용해서 복구한다. Checkpoint로 복구 범위를 줄인다 → Phase 5에서 상세히.
+장애 발생 시 DB를 일관된 상태로 복구하기 위해 **[WAL(Write-Ahead Log)](../glossary/wal.md)**을 유지한다. 데이터를 디스크에 쓰기 전에 Redo Log에 먼저 기록하는 것이 핵심 원칙이다. Crash 후 재시작 시 Redo Log를 재적용해서 복구한다. Checkpoint로 복구 범위를 줄인다 → Phase 5에서 상세히.
 
 ---
 
