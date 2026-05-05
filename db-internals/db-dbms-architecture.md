@@ -15,13 +15,13 @@ DBMS 내부 컴포넌트 구조를 알면 **병목이 어디서 생기는지**, 
 
 ```mermaid
 graph TD
-    CLIENT["클라이언트\n(Application)"]
+    CLIENT["클라이언트<br/>(Application)"]
 
     subgraph DBMS["DBMS"]
         direction TB
-        TRANSPORT["Transport Layer\n(연결 관리 / 프로토콜)"]
-        QP["Query Processor\n(Parser → Optimizer → Planner)"]
-        EE["Execution Engine\n(실행 계획 실행)"]
+        TRANSPORT["Transport Layer<br/>(연결 관리 / 프로토콜)"]
+        QP["Query Processor<br/>(Parser → Optimizer → Planner)"]
+        EE["Execution Engine<br/>(실행 계획 실행)"]
 
         subgraph SE["Storage Engine"]
             direction TB
@@ -32,7 +32,7 @@ graph TD
         end
     end
 
-    DISK["Disk\n(Data Files / Log Files)"]
+    DISK["Disk<br/>(Data Files / Log Files)"]
 
     CLIENT -->|SQL| TRANSPORT
     TRANSPORT --> QP
@@ -91,9 +91,9 @@ SQL을 받아서 실행 계획으로 변환하는 레이어다. 3단계로 구�
 ```mermaid
 flowchart LR
     SQL["SQL 문자열"]
-    PARSE["Parser\n문법 검증 + AST 생성"]
-    OPT["Optimizer\n최적 실행 계획 선택"]
-    PLAN["실행 계획\n(Query Plan)"]
+    PARSE["Parser<br/>문법 검증 + AST 생성"]
+    OPT["Optimizer<br/>최적 실행 계획 선택"]
+    PLAN["실행 계획<br/>(Query Plan)"]
 
     SQL --> PARSE --> OPT --> PLAN
 
@@ -141,10 +141,10 @@ graph TD
     EE["Execution Engine"]
 
     subgraph SE["Storage Engine (InnoDB)"]
-        TM["Transaction Manager\nACID 보장, Isolation Level 관리"]
-        LM["Lock Manager\nRow Lock / Gap Lock / Table Lock"]
-        BM["Buffer Manager\nBuffer Pool 관리, Page Cache"]
-        RM["Recovery Manager\nRedo Log, Crash Recovery"]
+        TM["Transaction Manager<br/>ACID 보장, Isolation Level 관리"]
+        LM["Lock Manager<br/>Row Lock / Gap Lock / Table Lock"]
+        BM["Buffer Manager<br/>Buffer Pool 관리, Page Cache"]
+        RM["Recovery Manager<br/>Redo Log, Crash Recovery"]
     end
 
     DATA["Data Files (.ibd)"]
