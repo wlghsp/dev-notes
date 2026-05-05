@@ -206,11 +206,9 @@ Column-oriented (ClickHouse, Redshift, BigQuery)
 └──────────────────────────────────────────┘
 ```
 
-| 기준 | Row-oriented | Column-oriented |
-|------|-------------|----------------|
-| 유리한 쿼리 | `SELECT * WHERE id = 1` (특정 row 전체) | `SELECT AVG(age) FROM users` (특정 컬럼 집계) |
-| 유리한 workload | OLTP (insert/update 많음) | OLAP (대량 집계, 분석) |
-| 이유 | row 단위 I/O → CRUD 효율적 | 필요한 컬럼만 읽음 + 압축률 높음 |
+Row-oriented는 특정 row 전체를 읽을 때 유리하다. `SELECT * WHERE id = 1`처럼 한 건의 레코드를 통째로 읽는 OLTP 패턴이 여기에 맞다. row 단위로 연속 저장되어 있어서 CRUD가 효율적이다.
+
+Column-oriented는 특정 컬럼만 대량으로 읽을 때 유리하다. `SELECT AVG(age) FROM users`처럼 수백만 행에서 컬럼 몇 개만 집계하는 OLAP 패턴이 여기에 맞다. 필요한 컬럼만 읽고 압축률도 높다.
 
 MySQL InnoDB는 Row-oriented다. OLTP 워크로드에 최적화되어 있다.
 
@@ -218,13 +216,9 @@ MySQL InnoDB는 Row-oriented다. OLTP 워크로드에 최적화되어 있다.
 
 ## 7. In-memory DB vs Disk-based DB
 
-| 기준 | Disk-based (InnoDB) | In-memory (Redis, VoltDB) |
-|------|--------------------|-----------------------|
-| 데이터 위치 | 기본적으로 Disk, 일부 Buffer Pool | 기본적으로 메모리 |
-| 속도 | µs ~ ms | ns ~ µs |
-| 내구성 | WAL + Data Files → 기본 보장 | 별도 Persistence 설정 필요 |
-| 용량 | 디스크 크기에 비례 (수 TB 가능) | 메모리 크기에 비례 (수십 GB 한계) |
-| 용도 | 일반 OLTP | 캐시, 세션, 실시간 처리 |
+Disk-based DB (InnoDB)는 데이터가 기본적으로 디스크에 있고, 자주 쓰는 Page만 Buffer Pool에 올린다. WAL + Data Files로 내구성이 기본 보장되고, 디스크 크기만큼 용량을 쓸 수 있다. 속도는 µs ~ ms 수준이다.
+
+In-memory DB (Redis, VoltDB)는 데이터가 메모리에 있다. 속도는 ns ~ µs 수준으로 훨씬 빠르지만, 메모리 크기가 용량 한계다. 내구성을 위해 별도 설정이 필요하다.
 
 In-memory DB도 내구성을 위해 WAL이나 스냅샷을 디스크에 쓰는 경우가 많다 (Redis AOF/RDB).
 
