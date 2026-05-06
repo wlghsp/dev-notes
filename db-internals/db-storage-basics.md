@@ -6,8 +6,8 @@
 
 ## 왜 이걸 먼저 알아야 하나?
 
-인덱스, 트랜잭션, 쿼리 최적화 — 모든 DB 내부 동작의 기반은 "디스크에서 데이터를 어떻게 읽고 쓰는가"에 있다.
-이 구조를 모르면 `EXPLAIN` 결과를 봐도 왜 느린지 근본 원인을 설명하지 못한다.
+인덱스가 왜 빠른지, 트랜잭션이 왜 느려지는지, WAL이 왜 필요한지 — 이 질문들은 결국 하나로 수렴한다: 디스크에서 데이터를 어떻게 읽고 쓰는가.
+여기서 안 쌓으면 이후 모든 개념이 암기가 된다.
 
 ---
 
@@ -162,7 +162,11 @@ Secondary Index 조회 (예: WHERE email = 'jiho@...')
 (= 2번의 B-Tree 탐색)
 ```
 
-이것이 "Primary Index as Indirection"이다. Primary Key를 포함하는 Covering Index를 만들면 2단계를 건너뛸 수 있어서 빠른 이유가 여기에 있다.
+즉, Secondary Index는 레코드를 직접 가리키지 않고 Primary Key를 거쳐서 도달한다.
+
+만약 Secondary Index가 레코드의 물리적 위치(디스크 주소)를 직접 저장했다면, 페이지 분할로 레코드가 다른 위치로 이동할 때마다 그 레코드를 가리키는 모든 Secondary Index를 찾아서 주소를 바꿔야 한다. InnoDB는 Secondary Index에 Primary Key 값을 저장하기 때문에, 레코드가 이동해도 Primary Index만 업데이트하면 된다. Secondary Index는 손댈 필요가 없다.
+
+Covering Index를 만들면 이 2단계를 건너뛸 수 있어서 빠르다.
 
 ### 삭제는 즉시 지우지 않는다 — Deletion Markers (Tombstones)
 
