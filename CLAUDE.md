@@ -18,12 +18,6 @@ klid-middlewares(업무 레포)와 분리되어 있음.
 
 ## 문서 생성 규칙
 
-### 실습 결과는 반드시 지호님이 직접 캡쳐해서 채운다
-- 트레이닝 문서의 SQL/명령어 실행 결과는 Claude가 예시로 채우지 않는다
-- 대신 실행 코드 블록 바로 아래에 `> 📷 **[직접 실행 결과 캡쳐 첨부]**` 플레이스홀더를 반드시 남긴다
-- 캡쳐가 채워지지 않은 실습은 미완성으로 간주한다
-- 이유: 직접 실행 → 캡쳐 → 문서화 과정이 학습이고, AI가 채운 예시는 학습이 아니다
-
 ### 트레이닝 문서는 타이트하게, 블로그는 프리하게
 - `blog/` — 자유롭게 작성, 발행 강제하지 않음
 - `jvm-training/`, `db-internals/` — 문서 생성 직후 Claude가 Q1(기본) 질문 1개를 즉시 던진다
@@ -80,11 +74,83 @@ klid-middlewares(업무 레포)와 분리되어 있음.
 - 지호님이 트레이닝 모드로 들어오면 그때 순서와 완료 기준을 안내한다.
 
 ### 트레이닝 모드일 때만 적용
-- 순서: 문서 읽기 → 실습 → 이해도 테스트 → 블로그 발행
-- 이해도 테스트는 3단계 (Q1 기본 / Q2 심화 / Q3 실전) — 지호님이 요청할 때 진행
-- 실습 결과(SQL, 로그 등)는 직접 붙여넣어야 완료로 인정
+- 순서: 문서 완성 → 블로그 발행 → 이해도 테스트
+- 문서 완성 후 테스트를 먼저 던지지 않는다. 블로그 발행 완료 후 테스트 진행
+- 이해도 테스트는 3단계 (Q1 기본 / Q2 심화 / Q3 실전)
 - DB 트레이닝은 "MySQL에서 이렇게 쓴다"보다 "왜 이렇게 동작하는가"를 중심으로
+
+### 중간 통합 테스트
+- 여러 Phase가 완료되면 단일 Phase 테스트 외에 통합 테스트를 진행한다
+- 예시: Phase 0~2 완료 후 → "INSERT 하나가 발생했을 때 Page, Buffer Pool, B-Tree가 어떻게 엮이는가 설명해봐"
+- 통합 테스트는 지호님이 요청할 때 진행. Claude가 먼저 제안하지 않는다.
 
 ### 트레이닝 현황 파일
 - JVM 로드맵: `jvm-training/TRAINING_ROADMAP.md`
 - DB Internals 로드맵: `db-internals/TRAINING_ROADMAP.md`
+
+
+# CLAUDE.md
+
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
