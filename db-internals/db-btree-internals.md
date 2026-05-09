@@ -4,10 +4,11 @@
 
 ---
 
-## 왜 이걸 알아야 하나?
+서비스 초기에 UUID를 PK로 썼다. 데이터가 수백만 건 쌓이자 INSERT가 눈에 띄게 느려졌다. EXPLAIN을 봐도 인덱스를 타고 있다. 근데 왜 느린가?
 
-인덱스가 왜 빠른지, 왜 UUID를 Primary Key로 쓰면 안 되는지, 왜 순차 삽입이 랜덤 삽입보다 빠른지 — 이 질문들은 모두 B-Tree 구조로 귀결된다.
-B-Tree를 모르면 인덱스는 그냥 "빠른 무언가"로만 남는다.
+UUID는 랜덤 값이라 삽입할 때마다 B-Tree의 다른 위치에 꽂힌다. 그 위치의 Page가 꽉 차 있으면 Page Split이 일어나고, 디스크 여기저기에 Random I/O가 발생한다. AUTO_INCREMENT였으면 항상 마지막 Page에만 추가되니까 Split도 없고 Sequential I/O다.
+
+이걸 모르면 "UUID는 쓰지 마세요"를 외우는 데서 끝난다. B-Tree 구조를 알면 왜 그런지, 어떤 상황에서 얼마나 느려지는지 설명할 수 있다.
 
 ---
 
@@ -19,82 +20,101 @@ BST는 각 노드가 키 하나, 값 하나, 자식 포인터 둘로 구성된�
 
 **첫째, Locality 문제다.** 노드가 삽입 순서대로 디스크 여기저기에 흩어진다. 자식 포인터를 따라가면 다른 디스크 블록으로 이동해야 할 수 있다. 노드를 하나 읽을 때마다 별도의 Disk I/O가 발생한다.
 
-**둘째, 높이(height) 문제다.** BST의 fanout은 2다. N개의 키를 가진 트리의 높이는 log₂N이다. 40억 개의 항목을 찾으려면 약 32번의 비교, 즉 32번의 Disk I/O가 필요하다.
+**둘째, 높이(height) 문제다.** fanout은 노드 하나가 가질 수 있는 자식 수다. BST의 fanout은 2 — 노드 하나가 자식을 2개밖에 못 가지니 트리가 깊어질 수밖에 없다. 40억 개 데이터를 담으면 높이가 32 — 루트에서 리프까지 32번 이동, 즉 32번 Disk I/O다.
 
+```mermaid
+graph TD
+    subgraph BST["BST (fanout=2) — 7개 데이터, 높이 3"]
+        B1["[4]"]
+        B2["[2]"]
+        B3["[6]"]
+        B4["[1]"]
+        B5["[3]"]
+        B6["[5]"]
+        B7["[7]"]
+        B1 --> B2 & B3
+        B2 --> B4 & B5
+        B3 --> B6 & B7
+    end
+
+    subgraph BTREE["B-Tree (fanout=4) — 7개 데이터, 높이 2"]
+        R["[2 | 4 | 6]"]
+        L1["[1]"]
+        L2["[3]"]
+        L3["[5]"]
+        L4["[7]"]
+        R --> L1 & L2 & L3 & L4
+    end
 ```
-BST (fanout = 2):
-  40억 개 검색 → 32번 Disk I/O
 
-B-Tree (fanout = 수백):
-  40억 개 검색 → 약 4~5번 Disk I/O
-```
+fanout이 크면 트리가 옆으로 넓어지고 위아래로 얕아진다. 같은 데이터를 담아도 트리 높이가 낮다는 뜻이고, 루트에서 리프까지 거치는 노드 수 = I/O 횟수가 줄어든다.
 
-B-Tree가 BST와 다른 점은 딱 두 가지다: **높은 fanout(high fanout)**과 **낮은 높이(low height)**. 이 두 특성이 디스크 I/O 횟수를 극적으로 줄인다.
-
-fanout이 높을수록 높이가 낮아진다. 각 노드가 수백 개의 키를 가질 수 있으면, 트리는 매우 넓고 낮아진다. 넓고 낮은 트리는 루트에서 리프까지 거치는 레벨 수가 적고, 레벨 하나가 Disk I/O 1번이므로 검색 비용이 극적으로 줄어든다.
+실제 DB는 fanout이 수백이라 수억 건 데이터도 높이 3~4로 끝난다. 노드 하나를 읽는 게 Disk I/O 1번이므로, 높이 = I/O 횟수다.
 
 ---
 
 ## 2. B-Tree 구조
 
+> 실제 DB에서 쓰는 건 엄밀히는 **B+Tree**다. B-Tree는 모든 노드에 값을 저장하지만, B+Tree는 값을 리프 노드에만 저장한다. MySQL InnoDB는 B+Tree를 사용하지만 관례적으로 B-Tree라고 부른다. 이 문서에서도 이하 B-Tree는 B+Tree를 의미한다.
+
 ```mermaid
 graph TD
-    ROOT["Root Node<br/>[ 13 | 18 ]"]
-    INT1["Internal Node<br/>[ 5 | 9 ]"]
-    INT2["Internal Node<br/>[ 15 | 16 ]"]
-    L1["Leaf<br/>[ 1 | 3 | 5 ]"]
-    L2["Leaf<br/>[ 7 | 9 | 11 ]"]
-    L3["Leaf<br/>[ 13 | 14 ]"]
-    L4["Leaf<br/>[ 15 | 16 ]"]
-    L5["Leaf<br/>[ 18 | 20 ]"]
+    ROOT["Root Node<br/>[ 10 | 20 ]<br/>Separator Key만"]
+    INT1["Internal Node<br/>[ 5 ]<br/>Separator Key만"]
+    INT2["Internal Node<br/>[ 15 ]<br/>Separator Key만"]
+    INT3["Internal Node<br/>[ 25 ]<br/>Separator Key만"]
+    L1["Leaf<br/>[ 1 | 3 ]<br/>실제 데이터"]
+    L2["Leaf<br/>[ 5 | 7 ]<br/>실제 데이터"]
+    L3["Leaf<br/>[ 10 | 13 ]<br/>실제 데이터"]
+    L4["Leaf<br/>[ 15 | 17 ]<br/>실제 데이터"]
+    L5["Leaf<br/>[ 20 | 23 ]<br/>실제 데이터"]
+    L6["Leaf<br/>[ 25 | 30 ]<br/>실제 데이터"]
 
-    ROOT --> INT1
-    ROOT --> INT2
-    ROOT --> L5
-    INT1 --> L1
-    INT1 --> L2
-    INT1 --> L3
-    INT2 --> L4
+    ROOT --> INT1 & INT2 & INT3
+    INT1 --> L1 & L2
+    INT2 --> L3 & L4
+    INT3 --> L5 & L6
 
     style ROOT fill:#e74c3c,color:#fff
     style INT1 fill:#8e44ad,color:#fff
     style INT2 fill:#8e44ad,color:#fff
+    style INT3 fill:#8e44ad,color:#fff
     style L1 fill:#27ae60,color:#fff
     style L2 fill:#27ae60,color:#fff
     style L3 fill:#27ae60,color:#fff
     style L4 fill:#27ae60,color:#fff
     style L5 fill:#27ae60,color:#fff
+    style L6 fill:#27ae60,color:#fff
 ```
 
 B-Tree 노드는 세 종류로 나뉜다.
 
-- **Root Node**: 트리의 최상위. 부모가 없다.
-- **Internal Nodes**: 루트와 리프 사이의 모든 노드. 키와 자식 포인터만 갖는다.
-- **Leaf Nodes**: 자식이 없는 최하위 노드. 실제 데이터(키 + 값)가 여기 있다.
+- **Root Node**: 트리의 최상위. 탐색의 시작점.
+- **Internal Nodes**: 루트와 리프 사이. 탐색 방향을 결정하는 Separator Key만 갖는다. 실제 데이터 없음.
+- **Leaf Nodes**: 최하위 노드. 실제 데이터(키 + 값)가 여기에만 있다.
 
-각 노드는 N개의 키와 N+1개의 자식 포인터를 가진다. 이 비율이 B-Tree의 핵심이다.
-
-**B+Tree vs B-Tree**
-
-실제 DB에서 쓰는 건 엄밀히는 **B+Tree**다. B-Tree는 모든 노드에 값을 저장한다. B+Tree는 값을 **리프 노드에만** 저장한다. Internal 노드에는 탐색을 위한 Separator Key만 있다.
-
-MySQL InnoDB는 B+Tree를 사용하지만, 관례적으로 그냥 "B-Tree"라고 부른다. 이 문서에서도 이하 B-Tree는 B+Tree를 의미한다.
+Separator Key가 어떻게 탐색 방향을 결정하는지는 3번에서 다룬다.
 
 ---
 
 ## 3. Separator Keys — 트리를 어떻게 탐색하는가
 
-Internal 노드의 키를 **Separator Key**(또는 Divider Key, Index Entry)라고 부른다. 이 키들이 트리를 구간으로 나눈다.
+Separator Key는 구간의 경계값이다. 경계 N개가 구간을 N+1개로 쪼개고, 각 구간마다 자식이 하나씩 붙는다.
 
 ```
-Internal 노드: [ K₁ | K₂ | K₃ ]
-               ↓    ↓    ↓    ↓
-          <K₁  K₁≤..K₂  K₂≤..K₃  ≥K₃
+        경계      경계
+          ↓        ↓
+Root  [ 10   |   20 ]
+      ↙           ↓           ↘
+  ~9           10~19          20~
+(왼쪽 자식)  (가운데 자식)  (오른쪽 자식)
+
+찾는 키 13 → 10~19 구간 → 가운데 자식으로 내려감
 ```
 
-- 첫 번째 포인터: K₁보다 작은 키들의 서브트리
-- 두 번째 포인터: K₁ 이상 K₂ 미만인 키들의 서브트리
-- 마지막 포인터: K₃ 이상인 키들의 서브트리
+경계 2개 → 구간 3개 → 자식 3개. 키 N개면 자식은 항상 N+1개인 이유다.
+
+Separator Key는 항상 정렬된 상태로 노드 안에 저장된다. 정렬되어 있으니까 노드 안에서 Binary Search로 구간을 찾을 수 있다.
 
 Lookup 알고리즘:
 1. Root에서 시작
@@ -114,18 +134,19 @@ B-Tree는 항상 균형을 유지한다. 균형을 깨지 않기 위해 노드�
 ### Leaf Node Split
 
 ```
-삽입 전 (노드가 꽉 참):
-Leaf: [ 10 | 13 | 15 ]
-                            → 11 삽입 시도 → 공간 없음 → Split
+삽입 전:
+Parent: [ 18 ]
+           ↓
+Leaf: [ 10 | 13 | 15 ]  ← 꽉 참. 11 삽입 시도 → 공간 없음 → Split
 
 Split 후:
-Parent: [ 13 | 18 ]  ← 13이 승격(promote)됨
+Parent: [ 13 | 18 ]  ← 중간 키 13이 부모로 승격(promote)됨
          ↓      ↓
-[ 10 | 11 ]   [ 13 | 15 ]
+[ 10 | 11 ]   [ 13 | 15 ]  ← 반으로 나뉜 두 Leaf
 ```
 
 1. 현재 노드를 반으로 나눈다 (split point = 중간 인덱스)
-2. 중간 키를 부모 노드로 **승격(promote)**시킨다
+2. 중간 키를 부모 노드로 **승격(promote)**시킨다 — 부모의 Separator Key가 하나 늘어남
 3. Split point 이후 요소들을 새로 만든 형제 노드로 이동시킨다
 4. 새 요소를 적절한 노드에 삽입한다
 
@@ -147,15 +168,20 @@ Internal 노드가 꽉 찬 경우도 같은 원리로 Split이 발생한다. 차
 삭제 시 노드가 너무 비면 **Merge**를 수행한다. B-Tree는 각 노드가 최소 절반 이상 차 있어야 한다는 invariant를 유지한다.
 
 ```
-삭제 후 노드가 너무 비었을 때:
-형제 노드: [ 10 | 13 ]
-현재 노드: [ 15 ]  ← 삭제 후 최소 occupancy 위반
+Merge 전:
+Parent: [ 14 ]          ← 14가 두 자식을 나누는 Separator Key
+         ↓      ↓
+[ 10 | 13 ]   [ 15 ]   ← 오른쪽 노드가 삭제 후 너무 빔
 
 Merge 후:
-[ 10 | 13 | 15 ]  ← 부모의 Separator Key가 내려와서 합쳐짐
+Parent: []              ← Separator Key 14가 아래로 내려감
+         ↓
+[ 10 | 13 | 14 | 15 ]  ← 두 노드 + 부모 Separator Key가 합쳐짐
 ```
 
-Merge도 Split처럼 위로 전파될 수 있다. 부모 노드가 빈 자식 포인터를 제거하면서 부모 자신도 비게 되면, 그 위 부모도 Merge가 필요해진다.
+두 자식을 합칠 때 그 사이를 구분하던 부모의 Separator Key도 함께 내려온다. 그래야 합쳐진 노드 안에서 키 순서가 유지된다. 부모는 Separator Key가 하나 줄고, 자식 포인터도 하나 줄어든다.
+
+Merge도 Split처럼 위로 전파될 수 있다. 부모에서 Separator Key가 사라지면서 부모 자신도 최소 occupancy를 위반하면, 그 위 부모도 Merge가 필요해진다.
 
 Split과 Merge를 통해 B-Tree는 항상 **모든 Leaf가 동일한 깊이에 있다**는 균형을 유지한다.
 
@@ -163,7 +189,7 @@ Split과 Merge를 통해 B-Tree는 항상 **모든 Leaf가 동일한 깊이에 �
 
 ## 6. Page 내부 구조 — Slotted Page
 
-Phase 0에서 배운 Page가 여기서 등장한다. B-Tree 노드 하나 = 디스크의 Page 하나다. InnoDB 기준으로 16KB.
+지금까지 "노드"라고 불렀던 것이 실제로는 디스크의 **Page**다. B-Tree 노드 하나 = Page 하나 = InnoDB 기준 16KB. Split이 일어나면 새 Page가 할당되고, Buffer Pool도 Page 단위로 캐싱한다.
 
 그런데 Page 안에 데이터를 어떻게 배치하는가? 단순하게 앞에서부터 순서대로 쌓으면 두 가지 문제가 생긴다.
 
@@ -268,49 +294,13 @@ B-Tree Leaf 레벨:
 - 기존 Page들은 한 번 쓰이면 거의 수정되지 않음 → Fragmentation 최소화
 - PostgreSQL은 이를 **fastpath** 최적화로 구현: 마지막으로 삽입한 Leaf Page를 캐싱해두고, 다음 삽입 시 루트부터 탐색 없이 바로 그 Page로 점프
 
-반면 UUID처럼 랜덤 키를 삽입하면 매번 트리 전체에서 삽입 위치를 탐색해야 하고, 어느 Page든 Split 대상이 될 수 있다.
+반면 UUID처럼 랜덤 키를 삽입하면 매번 트리 전체에서 삽입 위치를 탐색해야 하고, 어느 Page든 Split 대상이 될 수 있다. 해당 Page가 Buffer Pool에 없을 가능성도 높아서 Random I/O까지 발생한다. Fragmentation이 쌓이면 이후 range scan도 느려진다.
+
+순차 키가 필요하지만 UUID의 고유성도 필요하다면 `ULID`나 `UUID v7`을 쓴다 — 시간 기반으로 정렬 가능하면서 랜덤성도 유지한다.
 
 ---
 
-## 9. UUID를 Primary Key로 쓰면 안 되는 이유
-
-이 내용이 B-Tree 구조를 이해하면 자연스럽게 따라온다.
-
-InnoDB는 Primary Key 순서로 B+Tree에 데이터를 저장한다. 즉, Primary Key가 곧 데이터의 물리적 정렬 순서다.
-
-**순차적인 ID (AUTO_INCREMENT)**를 쓰면:
-
-```
-삽입 순서: 1, 2, 3, 4, 5, ...
-
-Leaf 노드: [ 1 | 2 | 3 | 4 | 5 ]
-                                 ← 항상 가장 오른쪽 Leaf에만 삽입
-                                 ← Split이 예측 가능하고, 기존 노드 재배치 없음
-```
-
-**랜덤 UUID**를 쓰면:
-
-```
-삽입 순서: 3f2a..., 7b1c..., 1d4e..., 9a2f..., ...
-(순서가 완전히 랜덤)
-
-→ 삽입할 때마다 B-Tree 중간 어딘가에 끼워 넣어야 함
-→ 해당 Leaf Page를 디스크에서 읽어와야 함 (Buffer Pool에 없을 가능성 높음)
-→ Page가 꽉 차 있으면 Split 발생
-→ Split이 빈번하고, 기존 Page 재배치가 자주 일어남
-→ Index fragmentation 증가
-→ Sequential scan이 느려짐 (물리적으로 연속하지 않은 Page들)
-```
-
-결론: UUID는 INSERT 성능을 저하시키고, Page fragmentation을 유발해서 이후 range scan도 느려진다.
-
-해결책:
-- `AUTO_INCREMENT` (가장 단순)
-- `ULID`, `UUID v7` — 시간 기반 순차 UUID. 랜덤성을 유지하면서 정렬 가능
-
----
-
-## 10. Page Fragmentation — 왜 주기적으로 정리가 필요한가
+## 9. Page Fragmentation — 왜 주기적으로 정리가 필요한가
 
 Slotted Page에서 삭제와 업데이트가 반복되면 Page 내부에 단편화가 쌓인다.
 
