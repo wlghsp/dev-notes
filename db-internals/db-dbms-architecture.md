@@ -107,17 +107,25 @@ Transport Layer는 두 가지 통신을 담당한다.
 
 ## 3. Query Processor
 
-SQL을 받아서 실행 계획으로 변환하는 레이어다. 3단계로 구성된다.
+SQL을 받아서 실행 계획으로 변환하는 레이어다. 단, Parser에 도달하기 전에 **Query Cache**를 먼저 거친다.
+
+**Query Cache** — 동일한 SQL 문자열이 이전에 실행된 적 있으면, 캐시된 결과를 바로 반환한다. Parser, Optimizer, Execution Engine을 전혀 거치지 않는다. 캐시 Miss인 경우에만 아래 파이프라인을 탄다.
+
+또한 MySQL은 SQL 쿼리와 관리 커맨드를 구분한다. `SHOW`, `SET` 같은 커맨드는 Parser를 거치지 않고 바로 처리된다. Parser를 타는 건 SQL 쿼리뿐이다.
 
 ```mermaid
 flowchart LR
     SQL["SQL 문자열"]
+    QC["Query Cache<br/>캐시 Hit → 바로 반환"]
     PARSE["Parser<br/>문법 검증 + AST 생성"]
     OPT["Optimizer<br/>최적 실행 계획 선택"]
     PLAN["실행 계획<br/>(Query Plan)"]
 
-    SQL --> PARSE --> OPT --> PLAN
+    SQL --> QC
+    QC -->|Miss| PARSE
+    PARSE --> OPT --> PLAN
 
+    style QC fill:#e67e22,color:#fff
     style PARSE fill:#2980b9,color:#fff
     style OPT fill:#8e44ad,color:#fff
     style PLAN fill:#16a085,color:#fff
@@ -174,6 +182,8 @@ Remote Execution은 분산 DB 환경에서 다른 노드에 있는 데이터를 
 Execution Engine이 Storage Engine을 어떻게 다루는지가 중요하다. Execution Engine은 Storage Engine의 내부 구현을 전혀 모른다. "이 row 줘", "이 row 써" 같은 단순한 API만 호출한다. 이 분리 덕분에 MySQL에서 InnoDB, MyISAM, RocksDB 같은 Storage Engine을 교체해도 Execution Engine 코드는 바뀌지 않는다.
 
 결과적으로 Execution Engine의 성능은 두 가지에 달려 있다. Buffer Pool이 클수록 Storage Engine의 I/O가 줄어서 빠르다. Lock 경쟁이 심할수록 동시에 실행 가능한 연산 수가 줄어서 느려진다.
+
+**Thread 모델**: MySQL은 클라이언트 연결마다 OS 스레드 하나를 생성한다. 각 스레드는 `THD(Thread Descriptor)` 객체를 가지며, 해당 연결의 세션 변수, 현재 DB, 트랜잭션 컨텍스트를 모두 여기에 담는다. 연결이 많아질수록 스레드가 늘어나고 컨텍스트 스위칭 비용이 증가한다. 이게 Connection Pool이 중요한 또 다른 이유다.
 
 ---
 
@@ -274,6 +284,8 @@ In-memory DB (Redis, VoltDB)는 데이터가 메모리에 있다. 속도는 ns ~
 
 In-memory DB도 내구성을 위해 WAL이나 스냅샷을 디스크에 쓰는 경우가 많다 (Redis AOF/RDB).
 
+**In-memory DB의 진짜 성능 이점**: 디스크를 안 읽어서만이 아니다. 메모리가 충분한 Disk-based DB도 Buffer Pool Hit 시 디스크를 거의 안 건드린다. 진짜 차이는 **인메모리 자료구조를 디스크 직렬화 포맷으로 변환하는 오버헤드가 없다**는 점이다. 또한 디스크에서 불가능한 자료구조(우선순위 큐, Set 등)를 네이티브로 제공할 수 있다.
+
 ---
 
 ## 실습
@@ -327,3 +339,11 @@ SHOW STATUS LIKE 'Connection%';
 Phase 2: [B-Tree 내부 구조](db-btree-internals.md)
 - Storage Engine이 데이터를 어떤 자료구조로 구성하는가
 - Page와 B-Tree 노드는 어떻게 맞물리는가
+
+---
+
+## 참고 문헌
+
+- *Database Internals* — Alex Petrov. 이 문서의 기반 교재. DBMS 아키텍처, Storage Engine 내부 구조.
+- *Designing Data-Intensive Applications* — Martin Kleppmann. In-memory DB 성능 이점, log-structured vs update-in-place 분류. Ch. 3 참고.
+- *Understanding MySQL Internals* — Sasha Pachev. Query Cache, Thread 모델(THD), Storage Engine handler 인터페이스. Ch. 1, 6, 7 참고.

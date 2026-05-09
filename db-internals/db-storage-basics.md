@@ -78,6 +78,8 @@ SSD의 핵심 제약:
 
 SSD는 seek time이 없어서 HDD보다 Random I/O가 훨씬 빠르지만, 여전히 메모리보다는 1,000배 이상 느리다. DB가 Buffer Pool을 유지하는 이유는 SSD 환경에서도 여전히 유효하다.
 
+**SSD 내부도 log-structured다**: SSD 펌웨어는 내부적으로 랜덤 쓰기를 Sequential 쓰기로 변환한다. 특정 위치를 덮어쓰는 대신, 항상 새 위치에 쓰고 매핑 테이블을 업데이트하는 방식이다. 그래서 SSD에서 Random I/O와 Sequential I/O의 속도 차이가 HDD보다 작다. 그러나 Write Amplification(논리적 쓰기 1회가 물리적 쓰기 여러 회로 증폭)은 여전히 SSD 수명에 영향을 주기 때문에 쓰기 횟수를 줄이는 게 중요하다.
+
 ---
 
 ## 3. Page — DB의 기본 I/O 단위
@@ -253,6 +255,8 @@ flowchart TD
 
 MySQL InnoDB 기본값은 128MB다. 실제 운영 환경에서는 가용 메모리의 **70~80%** 를 잡는 게 일반적인 권장값이다.
 
+**Double-caching 문제**: InnoDB는 자체 Buffer Pool을 관리하지만, OS도 파일 읽기/쓰기를 Page Cache에 캐싱한다. 설정을 안 하면 같은 데이터가 InnoDB Buffer Pool과 OS Page Cache 두 곳에 동시에 올라가서 메모리를 낭비한다. `innodb_flush_method=O_DIRECT`로 설정하면 InnoDB가 OS 캐시를 bypass하고 직접 디스크에 쓰기 때문에 이 중복을 제거할 수 있다.
+
 왜 70~80%인가? 100%를 주면 안 되는 이유가 있다:
 
 ```
@@ -382,7 +386,7 @@ LSM-Tree의 SSTable도 Immutable하다. 한번 디스크에 내려쓴 SSTable은
 
 Immutability의 이점:
 - Sequential Write만 발생 → HDD/SSD 모두에서 빠름
-- 동시성 제어가 단순해진다 (수정 중인 데이터가 없으니 Lock 경합 감소)
+- 동시성 제어가 단순해진다 — 쓰기 스레드 하나만 있으면 되고, 불변 세그먼트는 Lock 없이 여러 스레드가 동시에 읽을 수 있다
 - 자연스럽게 이전 버전이 유지되어 MVCC 구현에 유리
 
 ### Ordering (정렬)
@@ -457,3 +461,11 @@ Phase 1: [DBMS 아키텍처](db-dbms-architecture.md)
 Phase 2: B-Tree 내부 구조
 - Page들이 어떤 자료구조로 구성되는가
 - 왜 MySQL은 B-Tree를 선택했는가
+
+---
+
+## 참고 문헌
+
+- *Database Internals* — Alex Petrov. 이 문서의 기반 교재. Disk I/O, Page, Buffer Pool, 스토리지 구조 설계 원칙.
+- *Designing Data-Intensive Applications* — Martin Kleppmann. SSD 내부 log-structured 동작, Write Amplification, Append-only 설계의 동시성 이점. Ch. 3 참고.
+- *Understanding MySQL Internals* — Sasha Pachev. InnoDB Buffer Pool과 OS Page Cache Double-caching 문제, O_DIRECT 설정. Ch. 10 참고.

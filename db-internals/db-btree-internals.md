@@ -51,6 +51,8 @@ fanout이 크면 트리가 옆으로 넓어지고 위아래로 얕아진다. 같
 
 실제 DB는 fanout이 수백이라 수억 건 데이터도 높이 3~4로 끝난다. 노드 하나를 읽는 게 Disk I/O 1번이므로, 높이 = I/O 횟수다.
 
+구체적인 수치로 보면: 4KB Page에 branching factor 500이면 4레벨 트리로 **256TB**까지 저장 가능하다. 이 스케일에서 Leaf까지 내려가는 데 I/O가 4번뿐이다.
+
 ---
 
 ## 2. B-Tree 구조
@@ -161,6 +163,12 @@ Internal 노드가 꽉 찬 경우도 같은 원리로 Split이 발생한다. 차
 
 **B-Tree는 아래에서 위로 자란다.** Leaf 레벨과 Internal 레벨은 수평으로만 확장되고, 높이는 루트 Split 시에만 증가한다.
 
+**Split 도중 Crash가 나면?**
+
+Split은 여러 Page를 수정하는 작업이다. 새 Page 쓰기 → 부모 Page 업데이트 순서로 진행되는데, 그 사이에 서버가 죽으면 새 Page는 쓰였지만 부모가 가리키지 않는 **Orphan Page**가 생긴다. 트리 구조가 깨진 상태다.
+
+이게 WAL(Write-Ahead Log)이 필요한 이유다. 데이터 정합성뿐 아니라 **인덱스 구조 자체의 corruption을 막기 위해** Split 전에 로그를 먼저 기록한다. Crash 후 재시작 시 WAL을 재적용해서 Split을 완성하거나 롤백한다.
+
 ---
 
 ## 5. Node Merge — 삭제가 트리를 어떻게 바꾸는가
@@ -245,6 +253,39 @@ InnoDB에서 B-Tree 노드 하나 = Page 하나 = 16KB다.
 Buffer Pool에서 Page 단위로 캐싱되는 것이 곧 B-Tree 노드를 캐싱하는 것이다. Root 노드는 거의 항상 Buffer Pool에 있다. 자주 사용되기 때문이다. Leaf 노드는 조회 패턴에 따라 Buffer Pool에 있을 수도, 없을 수도 있다.
 
 B-Tree 탐색은 레벨 수 = Disk I/O 횟수다. Root가 Buffer Pool에 있으면 Root 접근은 메모리 접근이 된다. Height가 4인 B-Tree에서 Root가 캐시에 있다면 실제 Disk I/O는 3번이다.
+
+### Adaptive Hash Index
+
+InnoDB는 B-Tree Page가 Buffer Pool에 올라오면 자동으로 **인메모리 Hash Index**를 추가로 만든다. 디스크의 B-Tree 구조는 그대로 유지되고, 메모리 위에서만 Hash로 가속하는 방식이다.
+
+```
+디스크: B-Tree (변하지 않음)
+           ↓ Buffer Pool에 올라오면
+메모리: B-Tree Page + Hash Index (자동 생성)
+
+Point lookup (key=13):
+  B-Tree 탐색: Root → Internal → Leaf (3번 이동)
+  Hash Index:  Hash(13) → 바로 해당 슬롯 (1번)
+```
+
+Point lookup(`=` 쿼리)에서 B-Tree 탐색을 건너뛰고 Hash로 바로 찾아간다. Range query는 Hash로 할 수 없어서 여전히 B-Tree를 탄다. DBA가 설정할 필요 없이 InnoDB가 자동으로 관리한다.
+
+### Page Directory — Page 내부 탐색
+
+Page 안에 수백 개의 레코드가 있을 때, 원하는 키를 어떻게 찾는가? InnoDB는 **Page Directory**라는 sparse한 포인터 배열을 Page 안에 유지한다.
+
+```
+Page Directory (sparse):
+  [ →slot1 | →slot5 | →slot9 | →slot13 ]
+       ↓
+  Binary Search로 범위를 좁힘
+       ↓
+  해당 slot에서 linked-list로 순차 탐색 (짧은 거리)
+       ↓
+  정확한 레코드 도달
+```
+
+전체를 순차 스캔하지 않고, Binary Search로 슬롯을 좁힌 뒤 짧은 구간만 linked-list로 따라간다. Slotted Page의 Offset 배열과 역할이 비슷하지만, Page Directory는 더 sparse하게 유지해서 오버헤드를 줄인다.
 
 ---
 
@@ -419,8 +460,51 @@ EXPLAIN SELECT * FROM your_table WHERE id = 12345;
 
 ---
 
+## B-Tree vs LSM-Tree — Phase 3 예고
+
+LSM-Tree는 B-Tree의 쓰기 성능 약점을 해결하기 위해 나온 구조다. 두 구조의 트레이드오프를 미리 잡아두면 Phase 3가 수월하다.
+
+**Write Amplification**
+
+B-Tree는 논리적 쓰기 1번이 물리적으로 여러 번 기록된다.
+
+```
+논리적 쓰기 1번 →
+  1. WAL에 기록
+  2. 실제 Page에 기록
+  (Split이 일어나면 추가 Page 쓰기 발생)
+```
+
+이를 **Write Amplification**이라 한다. SSD는 erase-cycle 한계가 있어서 Write Amplification이 높으면 수명이 줄어든다.
+
+**B-Tree의 강점**
+
+- 키가 트리에 딱 한 곳에만 존재한다 → 트랜잭션 Lock을 키 범위에 직접 걸 수 있어 구현이 단순하다
+- Read latency가 예측 가능하다 — LSM-Tree는 compaction이 돌 때 I/O를 잡아먹어서 읽기 지연이 튄다
+
+**LSM-Tree의 강점**
+
+- 쓰기를 메모리(Memtable)에 모았다가 Sequential하게 한 번에 flush → Write Amplification이 낮다
+- Compaction으로 주기적으로 파일을 재작성 → 파편화 없이 디스크를 compact하게 유지
+- Leaf 페이지를 Sequential하게 배치 → Range scan에서 B-Tree보다 유리
+
+**LSM-Tree의 약점**
+
+- 같은 키가 여러 파일에 존재할 수 있다 → 읽을 때 여러 파일을 확인해야 함
+- Compaction이 쓰기 속도를 못 따라가면 파일이 계속 쌓여서 읽기 성능이 저하되고 디스크가 고갈될 수 있다 — 운영 모니터링이 필수
+
+---
+
 ## 다음 단계
 
 Phase 3: [LSM-Tree — 쓰기 최적화 구조의 원리](db-lsm-tree.md)
 - B-Tree의 약점(쓰기 성능)을 LSM-Tree는 어떻게 해결하는가
 - Memtable, SSTable, Compaction의 동작 원리
+
+---
+
+## 참고 문헌
+
+- *Database Internals* — Alex Petrov. 이 문서의 기반 교재. B-Tree, LSM-Tree, Storage Engine 내부 구조를 깊게 다룬다.
+- *Designing Data-Intensive Applications* — Martin Kleppmann. B-Tree vs LSM-Tree 비교, Write Amplification, 분산 시스템 트레이드오프. Ch. 3 참고.
+- *Understanding MySQL Internals* — Sasha Pachev. InnoDB 구현 레벨 상세. Adaptive Hash Index, Page Directory, MVCC hidden fields. Ch. 10~11 참고.
