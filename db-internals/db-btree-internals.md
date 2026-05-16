@@ -364,6 +364,30 @@ MySQL InnoDB에서는 `OPTIMIZE TABLE` 명령으로 강제 실행할 수 있고,
 
 ---
 
+## 10. Range Scan — Leaf 노드를 어떻게 순서대로 읽는가
+
+B-Tree에서 단건 조회(Point Query)는 Root → Internal → Leaf 경로를 따라 내려간다. 그런데 `WHERE id BETWEEN 100 AND 200` 같은 범위 조회는 어떻게 동작하는가?
+
+B+Tree의 Leaf 노드는 **Doubly Linked List**로 연결되어 있다.
+
+```
+Leaf 노드 연결 구조:
+
+[Leaf: 1~50] ←→ [Leaf: 51~100] ←→ [Leaf: 101~150] ←→ [Leaf: 151~200]
+```
+
+Range Scan 순서:
+1. Root부터 내려가 시작 Key(100)가 있는 Leaf를 찾는다
+2. 해당 Leaf에서 조건에 맞는 Row를 읽는다
+3. 끝 Key(200)에 도달할 때까지 오른쪽 Leaf로 포인터를 따라 이동한다
+4. 조건을 벗어나면 중단한다
+
+이 구조 덕분에 Range Scan은 추가적인 Root 탐색 없이 Leaf를 수평으로 훑는다. 정렬된 순서로 데이터가 저장되어 있기 때문에 순차 I/O에 가까운 성능을 낸다.
+
+반면 Fragmentation(9번)이 심하면 논리적으로는 인접한 Leaf여도 물리적 디스크 위치가 흩어져 있어 순차 I/O 이점이 사라진다. Defragmentation이 Range Scan 성능에도 영향을 주는 이유다.
+
+---
+
 ## 11. 전체 흐름 정리
 
 ```mermaid
