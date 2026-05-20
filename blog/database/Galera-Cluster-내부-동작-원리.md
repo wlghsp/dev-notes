@@ -126,9 +126,11 @@ node2: UPDATE users SET name='Bob'   WHERE id=1;
 
 ```
 COMMIT 명령
-    → 로컬 디스크에 저장
-    → 완료
+    → Redo Log (WAL) fsync → 완료 응답
+    → (이후 background) Buffer Pool dirty page → 데이터 파일 flush
 ```
+`   
+COMMIT 시점에 디스크에 기록되는 건 Redo Log입니다. 실제 데이터 파일은 Buffer Pool의 dirty page가 나중에 flush될 때 반영됩니다.
 
 ### Galera 커밋 (2-phase commit과 유사)
 
@@ -137,8 +139,9 @@ COMMIT 명령
     → Write-Set 생성
     → 클러스터 전체에 브로드캐스트
     → 모든 노드에서 Certification
-    → 전체 OK → 로컬 커밋 + 다른 노드에 Apply
+    → 전체 OK → 로컬 Redo Log fsync + 다른 노드에 Apply
     → 클라이언트에 응답 반환
+    → (이후 background) 각 노드 Buffer Pool dirty page → 데이터 파일 flush
 ```
 
 이 때문에 Galera는 일반 MariaDB보다 **쓰기 지연(latency)이 높습니다.**
