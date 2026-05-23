@@ -2,7 +2,7 @@
 
 네트워크 통신의 양 끝단을 나타내는 추상화. 프로세스가 네트워크를 통해 데이터를 주고받기 위한 출입구다.
 
-소켓은 개념이고, TCP/UDP는 그 소켓이 어떤 방식으로 통신할지 결정하는 프로토콜이다.
+소켓은 전화기고, TCP/UDP는 통화 방식이다. 전화기(소켓)는 동일하고, 전화 통화처럼 연결하고 확인하고 끊을지(TCP), 문자처럼 그냥 던지고 끝낼지(UDP)를 고르는 것이다.
 
 ## 소켓의 정체
 
@@ -48,7 +48,7 @@ OS 커널이 실제 네트워크 전송을 처리하고, 프로세스는 파일 
 - 네트워크 스택을 거치지 않아서 더 빠르다
 - MySQL, PostgreSQL, Redis 등이 로컬 접속에 활용
 
-MySQL에서 `-h localhost`로 접속하면 Unix Domain Socket을 쓰고, `-h 127.0.0.1`이면 Network Socket(TCP)을 쓰는 이유가 여기 있다. 참고: mysql-socket.md
+MySQL에서 `-h localhost`로 접속하면 Unix Domain Socket을 쓰고, `-h 127.0.0.1`이면 Network Socket(TCP)을 쓴다. 같은 서버를 가리키지만 소켓 종류가 달라서 에러가 날 때 원인도 다르다. 참고: mysql-socket.md
 
 ## 포트와 소켓의 관계
 
