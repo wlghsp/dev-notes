@@ -51,6 +51,19 @@ GTID를 쓰면 트랜잭션 단위로 추적하므로 Master가 바뀌어도 `MA
 
 ---
 
+## redo log와의 관계
+
+InnoDB는 두 개의 로그 레이어를 따로 유지한다.
+
+- redo log — InnoDB 엔진 레벨. 크래시 복구 전용. 커밋 시 fsync 보장.
+- binlog — MySQL 서버 레벨. 복제·PITR 전용. 엔진과 무관하게 동작.
+
+둘은 목적이 다르다. redo log는 "서버가 죽었다 살아났을 때 데이터 손실 없이 복구"가 목적이고, binlog는 "다른 서버에 변경을 전파하거나 특정 시점으로 되돌리는" 것이 목적이다.
+
+커밋 시 두 로그가 모두 기록되어야 한다. 둘 중 하나만 기록된 채로 크래시가 나면 redo log와 binlog가 불일치하게 된다. 이를 막기 위해 내부적으로 2PC(Two-Phase Commit)를 사용한다. 참고: two-phase-commit.md
+
+---
+
 ## 다른 DB의 유사 개념
 
 binlog는 MariaDB/MySQL 고유 구현이지만, "변경 이벤트를 순서대로 기록한다"는 개념은 모든 RDBMS에 있다.
