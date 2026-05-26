@@ -61,6 +61,21 @@ Debezium MySQL Connector
 
 ---
 
+## 전달 보장과 CDC
+
+CDC 파이프라인은 기본적으로 At-Least-Once다.
+
+Debezium이 binlog를 읽고 Kafka에 발행할 때, 발행 후 offset을 커밋하기 전에 죽으면 재시작 시 같은 이벤트를 다시 발행한다. 소비자가 이미 처리한 이벤트를 또 받을 수 있다.
+
+이 중복을 처리하는 방법은 두 가지다.
+
+1. 소비자 측을 멱등하게 설계한다. 같은 이벤트가 두 번 들어와도 결과가 달라지지 않도록.
+2. Deduplication을 추가한다. 이벤트 ID(binlog position 등)를 기준으로 이미 처리한 이벤트를 무시.
+
+CDC에서 Exactly-Once를 구현하려면 Kafka 트랜잭션과 소비자의 idempotent 처리를 함께 맞춰야 하는데, 시스템 경계(Kafka → 외부 DB)에서는 완전한 보장이 어렵다.
+
+---
+
 ## 주의점
 
 - binlog가 활성화돼 있어야 한다 (`log_bin=ON`)
@@ -74,3 +89,8 @@ Debezium MySQL Connector
 > CDC = DB 변경을 binlog에서 읽어 이벤트로 전파. 애플리케이션 수정 없이 여러 시스템에 데이터 동기화.
 
 참고: redo-log.md, mvcc.md
+참고: at-least-once.md
+참고: exactly-once.md
+참고: idempotency.md
+참고: deduplication.md
+참고: offset.md
