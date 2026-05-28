@@ -70,9 +70,9 @@ Debezium이 binlog를 읽고 Kafka에 발행할 때, 발행 후 offset을 커밋
 이 중복을 처리하는 방법은 두 가지다.
 
 1. 소비자 측을 멱등하게 설계한다. 같은 이벤트가 두 번 들어와도 결과가 달라지지 않도록.
-2. Deduplication을 추가한다. 이벤트 ID(binlog position 등)를 기준으로 이미 처리한 이벤트를 무시.
+2. 중복 제거를 추가한다. 이벤트 ID(binlog position 등)를 기준으로 이미 처리한 이벤트를 무시.
 
-CDC에서 Exactly-Once를 구현하려면 Kafka 트랜잭션과 소비자의 idempotent 처리를 함께 맞춰야 하는데, 시스템 경계(Kafka → 외부 DB)에서는 완전한 보장이 어렵다.
+CDC에서 Exactly-Once를 구현하려면 Kafka 트랜잭션과 소비자의 멱등 처리를 함께 맞춰야 하는데, 시스템 경계(Kafka → 외부 DB)에서는 완전한 보장이 어렵다.
 
 ---
 
