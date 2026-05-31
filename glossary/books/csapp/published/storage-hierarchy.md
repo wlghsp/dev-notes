@@ -2,19 +2,17 @@
 
 컴퓨터 시스템에서 저장소는 속도와 용량이 반비례하는 계층으로 구성된다.
 
-```
-빠름 / 작음 / 비쌈
-    ↑
-  [레지스터]       수십 byte   ~1 cycle
-  [L1 캐시]        수 KB       ~4 cycles
-  [L2 캐시]        수백 KB     ~10 cycles
-  [L3 캐시]        수 MB       ~30 cycles
-  [메인 메모리]    수 GB       ~100 cycles   (DRAM)
-  [SSD]            수백 GB     ~수천 cycles
-  [HDD]            수 TB       ~수십만 cycles
-    ↓
-느림 / 큼 / 쌈
-```
+| 계층 | 용량 | 접근 시간 |
+|---|---|---|
+| 레지스터 | 수십 byte | ~1 cycle |
+| L1 캐시 | 수 KB | ~4 cycles |
+| L2 캐시 | 수백 KB | ~10 cycles |
+| L3 캐시 | 수 MB | ~30 cycles |
+| 메인 메모리 (DRAM) | 수 GB | ~100 cycles |
+| SSD | 수백 GB | ~수천 cycles |
+| HDD | 수 TB | ~수십만 cycles |
+
+위로 갈수록 빠르고 작고 비싸다. 아래로 갈수록 느리고 크고 싸다.
 
 ## 핵심 원칙
 
@@ -29,5 +27,5 @@
 ## 관련 개념
 
 - 캐시의 동작 원리는 cache.md 참고
-- SRAM과 DRAM의 구조적 차이는 sram-dram.md 참고
+- SRAM과 DRAM의 구조적 차이는 ram-dram-sram.md 참고
 - 프로그램이 지역성을 활용해 이 계층을 효율적으로 쓰는 방법은 locality.md 참고
