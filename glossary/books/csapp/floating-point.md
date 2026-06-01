@@ -82,4 +82,4 @@ IEEE 754를 이해하려면 이진 분수부터 알아야 한다. 소수점 왼�
 
 부동소수점 연산은 ALU가 아니라 FPU(Floating Point Unit)가 처리한다. 정수 연산보다 회로가 복잡해서 클럭이 더 걸린다. AI 학습에서 GPU를 쓰는 이유 중 하나가 GPU가 부동소수점 연산에 최적화된 FPU를 대량으로 가지고 있기 때문이다.
 
-참고: alu.md, integer-representation.md, bit-byte.md
+참고: alu.md, integer-representation.md, bit-byte.md, ieee-floating-point.md, floating-point-rounding.md

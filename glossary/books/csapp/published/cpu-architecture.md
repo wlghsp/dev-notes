@@ -18,7 +18,7 @@ x86-64 (= amd64)
 
 ARM (aarch64 / arm64)
 - 모바일, 임베디드에서 시작해서 지금은 Mac, 서버까지 확장
-- 저전력 고효율 설계. 명령어 집합이 x86보다 단순
+- RISC 기반 설계 — 명령어를 단순하고 고정 길이로 유지해서 저전력·고효율이 가능했다. x86은 CISC로 명령어가 복잡하고 가변 길이다
 - Apple Silicon(M1, M2, M3)이 ARM 기반. aarch64가 ARM 64비트를 가리키는 공식 명칭
 - AWS Graviton, Raspberry Pi도 ARM
 
@@ -43,4 +43,5 @@ Apple Silicon Mac에서 x86-64 바이너리를 실행할 수 있는 이유. Appl
 ## 관련 개념
 
 - 32비트 vs 64비트 차이는 32bit-64bit.md 참고
-- cpu-history.md 참고
+- cpu-history.md 참고 — CPU/메모리 관리 진화 역사
+- isa-history.md 참고 — CISC vs RISC, ISA 설계 철학의 역사

@@ -105,4 +105,4 @@ printf("%d", u);   // -2147483648 — 큰 unsigned를 signed로 해석
 
 이 동작은 보안 취약점으로 이어진 사례가 있다. FreeBSD의 `getpeername` 함수에서 음수 값이 unsigned로 해석되어 의도치 않게 커널 메모리를 읽을 수 있는 취약점이 발생했다.
 
-참고: alu.md, bit-byte.md, integer-overflow.md
+참고: alu.md, bit-byte.md, integer-overflow.md, unsigned-encoding.md, twos-complement.md
