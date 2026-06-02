@@ -17,33 +17,35 @@
 ## Chapter 3 — Braille and Binary Codes
 
 - [x] braille-binary.md — 점자 구조, 6비트로 64가지 표현
-- [ ] code-reuse.md — 같은 코드를 문맥에 따라 다르게 해석 (숫자 표시자, 대문자 표시자)
+- [x] code-reuse.md — 같은 코드를 문맥에 따라 다르게 해석 (숫자 표시자, 대문자 표시자)
 
 ## Chapter 4 — Anatomy of a Flashlight
 
-- [ ] electric-circuit.md — 전기 회로 기초, 전류가 흐르는 조건
-- [ ] switch.md — 스위치, 회로를 열고 닫는 장치
+- [x] electron.md — 전자, 전기의 정체
+- [x] electric-circuit.md — 전기 회로 기초, 전류가 흐르는 조건
+- [x] switch.md — 스위치, 회로를 열고 닫는 장치
 
 ## Chapter 5 — Seeing Around Corners
 
-- [ ] telegraph.md — 전신기, 전기로 먼 거리 신호 전달
-- [ ] wire-signal.md — 전선으로 신호를 보내는 원리
+- [x] telegraph.md — 전신기, 전기로 먼 거리 신호 전달
+- [x] wire-signal.md — 전선으로 신호를 보내는 원리
+- [x] ground.md — 접지, 지구를 전선 대신 쓰는 원리
 
 ## Chapter 6 — Telegraphs and Relays
 
-- [ ] relay.md — 릴레이, 약한 신호로 강한 신호를 제어하는 전자기 스위치
-- [ ] signal-amplification.md — 신호 증폭, 먼 거리 전송의 핵심
+- [x] relay.md — 릴레이, 약한 신호로 강한 신호를 제어하는 전자기 스위치
+- [x] signal-amplification.md — 신호 증폭, 먼 거리 전송의 핵심
 
 ## Chapter 7 — Our Ten Digits
 
-- [ ] decimal-system.md — 10진수 체계, 위치 기수법
-- [ ] positional-notation.md — 자리값, 위치에 따라 값이 달라지는 표기법
+- [x] decimal-system.md — 10진수 체계, 위치 기수법
+- [x] positional-notation.md — 자리값, 위치에 따라 값이 달라지는 표기법
 
 ## Chapter 8 — Alternatives to Ten
 
-- [ ] binary-number.md — 2진수, 0과 1로 수 표현
-- [ ] octal-hex.md — 8진수와 16진수, 이진수를 읽기 쉽게 묶는 방법
-- [ ] base-conversion.md — 진수 변환
+- [x] binary-number.md — 2진수, 0과 1로 수 표현
+- [x] octal-hex.md — 8진수와 16진수, 이진수를 읽기 쉽게 묶는 방법
+- [x] base-conversion.md — 진수 변환
 
 ## Chapter 9 — Bit by Bit by Bit
 

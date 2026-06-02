@@ -12,6 +12,7 @@ klid-middlewares(업무 레포)와 분리되어 있음.
 - `jvm-training/` — JVM 트레이닝 시리즈 및 로드맵
 - `db-internals/` — DB Internals 트레이닝 시리즈 및 로드맵
 - `glossary/` — 용어집 (주제별 개념 정의, 트레이닝/블로그와 연결)
+  - `glossary/*/published/` — 지호님이 직접 블로그에 발행 완료한 glossary 파일. 발행 여부는 지호님이 관리하며 Claude가 관여하지 않는다.
 - `spring/` — Spring 학습 노트
 - `java/` — Java 학습 노트
 - `book/` — 기술 서적 독서 노트
