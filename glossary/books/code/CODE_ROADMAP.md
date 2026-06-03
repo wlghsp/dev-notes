@@ -64,25 +64,25 @@
 
 ## Chapter 12 — A Binary Adding Machine
 
-- [ ] half-adder.md — 반가산기, 1비트 덧셈
-- [ ] full-adder.md — 전가산기, 올림수 포함 덧셈
-- [ ] ripple-carry-adder.md — 여러 비트 덧셈기
+- [x] half-adder.md — 반가산기, 1비트 덧셈
+- [x] full-adder.md — 전가산기, 올림수 포함 덧셈
+- [x] ripple-carry-adder.md — 여러 비트 덧셈기
 
 ## Chapter 13 — But What About Subtraction?
 
-- [ ] twos-complement-code.md — 2의 보수로 뺄셈을 덧셈으로 처리
-- [ ] overflow.md — 오버플로우, 표현 범위를 넘었을 때
+- [x] twos-complement-code.md — 2의 보수로 뺄셈을 덧셈으로 처리
+- [x] overflow.md — 오버플로우, 표현 범위를 넘었을 때
 
 ## Chapter 14 — Feedback and Flip-Flops
 
-- [ ] feedback.md — 피드백, 출력을 입력으로 되돌리기
-- [ ] flip-flop.md — 플립플롭, 1비트를 기억하는 회로
-- [ ] latch.md — 래치, 상태를 잠그는 회로
+- [x] feedback.md — 피드백, 출력을 입력으로 되돌리기
+- [x] flip-flop.md — 플립플롭, 1비트를 기억하는 회로
+- [x] latch.md — 래치, 상태를 잠그는 회로
 
 ## Chapter 15 — Bytes and Hex
 
-- [ ] byte.md — 바이트, 8비트 묶음
-- [ ] hexadecimal.md — 16진수 표기법
+- [x] byte.md — 바이트, 8비트 묶음
+- [x] hexadecimal.md — 16진수 표기법
 
 ## Chapter 16 — An Assemblage of Memory
 
