@@ -49,18 +49,18 @@
 
 ## Chapter 9 — Bit by Bit by Bit
 
-- [ ] bit.md — 비트, 정보의 최소 단위
-- [ ] information-theory-intro.md — 정보량의 개념, 불확실성과 비트
+- [x] bit.md — 비트, 정보의 최소 단위
+- [x] information-theory-intro.md — 정보량의 개념, 불확실성과 비트, 섀넌
 
 ## Chapter 10 — Logic and Switches
 
-- [ ] boolean-logic.md — 불 논리, AND/OR/NOT
-- [ ] truth-table.md — 진리표
+- [x] boolean-logic.md — 불 논리, AND/OR/NOT, 스위치와의 연결
+- [x] truth-table.md — 진리표, 모든 입력 조합과 출력
 
 ## Chapter 11 — Gates (Not Bill)
 
-- [ ] logic-gate.md — 논리 게이트, 릴레이로 만드는 AND/OR/NOT
-- [ ] nand-nor.md — NAND/NOR, 모든 게이트를 만들 수 있는 범용 게이트
+- [x] logic-gate.md — 논리 게이트, 릴레이로 만드는 AND/OR/NOT
+- [x] nand-nor.md — NAND/NOR, 모든 게이트를 만들 수 있는 범용 게이트
 
 ## Chapter 12 — A Binary Adding Machine
 
