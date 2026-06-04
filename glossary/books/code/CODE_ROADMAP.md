@@ -86,19 +86,19 @@
 
 ## Chapter 16 — An Assemblage of Memory
 
-- [ ] ram-structure.md — RAM 구성 원리, 주소로 셀을 선택
-- [ ] address-bus.md — 주소 버스, 몇 비트면 몇 개를 가리킬 수 있나
+- [x] ram-structure.md — RAM 구성 원리, 주소로 셀을 선택
+- [x] address-bus.md — 주소 버스, 몇 비트면 몇 개를 가리킬 수 있나
 
 ## Chapter 17 — Automation
 
-- [ ] counter.md — 카운터, 클럭 신호에 따라 값이 증가하는 회로
-- [ ] clock-signal.md — 클럭 신호, 회로 동작의 박자
+- [x] counter.md — 카운터, 클럭 신호에 따라 값이 증가하는 회로
+- [x] clock-signal.md — 클럭 신호, 회로 동작의 박자
 
 ## Chapter 18 — From Abaci to Chips
 
-- [ ] vacuum-tube.md — 진공관, 릴레이를 대체한 전자 스위치
-- [ ] transistor.md — 트랜지스터, 반도체로 만든 스위치
-- [ ] integrated-circuit.md — 집적회로(IC), 트랜지스터를 칩 위에
+- [x] vacuum-tube.md — 진공관, 릴레이를 대체한 전자 스위치
+- [x] transistor.md — 트랜지스터, 반도체로 만든 스위치
+- [x] integrated-circuit.md — 집적회로(IC), 트랜지스터를 칩 위에
 
 ## Chapter 19 — Two Classic Microprocessors
 
