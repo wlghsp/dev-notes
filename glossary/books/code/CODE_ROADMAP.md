@@ -102,18 +102,18 @@
 
 ## Chapter 19 — Two Classic Microprocessors
 
-- [ ] microprocessor.md — 마이크로프로세서, CPU를 하나의 칩으로
-- [ ] instruction-set-code.md — 명령어 집합, 프로세서가 이해하는 코드
+- [x] microprocessor.md — 마이크로프로세서, CPU를 하나의 칩으로
+- [x] instruction-set-code.md — 명령어 집합, 프로세서가 이해하는 코드
 
 ## Chapter 20 — ASCII and a Cast of Characters
 
-- [ ] ascii.md — ASCII, 문자를 숫자로 표현하는 표준
-- [ ] character-encoding.md — 문자 인코딩, 왜 여러 표준이 존재하는가
+- [x] ascii.md — ASCII, 문자를 숫자로 표현하는 표준
+- [x] character-encoding.md — 문자 인코딩, 왜 여러 표준이 존재하는가
 
 ## Chapter 21 — Get on the Bus
 
-- [ ] bus.md — 버스, CPU/메모리/장치를 연결하는 공유 통로
-- [ ] memory-mapped-io.md — 메모리 맵 I/O
+- [x] bus.md — 버스, CPU/메모리/장치를 연결하는 공유 통로
+- [x] memory-mapped-io.md — 메모리 맵 I/O
 
 ## Chapter 22 — The Operating System
 
