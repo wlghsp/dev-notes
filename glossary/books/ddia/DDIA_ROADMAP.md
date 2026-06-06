@@ -15,12 +15,12 @@
 
 ### Chapter 2 — Data Models and Query Languages
 
-- [ ] relational-model.md — 테이블/관계 기반 모델, SQL의 토대
-- [ ] document-model.md — JSON/BSON 기반 모델, locality 장점과 join 한계
-- [ ] schema-on-write-vs-read.md — 스키마 강제 시점 차이, 각각의 트레이드오프
-- [ ] impedance-mismatch.md — 객체와 관계형 모델 간 불일치 문제
-- [ ] graph-model.md — 노드/엣지 기반 모델, many-to-many 관계에 강한 이유
-- [ ] declarative-vs-imperative-query.md — SQL(선언형) vs 명령형 쿼리의 차이
+- [x] relational-model.md — 테이블/관계 기반 모델, SQL의 토대
+- [x] document-model.md — JSON/BSON 기반 모델, locality 장점과 join 한계
+- [x] schema-on-write-vs-read.md — 스키마 강제 시점 차이, 각각의 트레이드오프
+- [x] impedance-mismatch.md — 객체와 관계형 모델 간 불일치 문제
+- [x] graph-model.md — 노드/엣지 기반 모델, many-to-many 관계에 강한 이유
+- [x] declarative-vs-imperative-query.md — SQL(선언형) vs 명령형 쿼리의 차이
 
 ### Chapter 3 — Storage and Retrieval
 
