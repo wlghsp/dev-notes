@@ -20,4 +20,5 @@
 ## tail latency와의 관계
 
 head-of-line blocking은 tail latency를 두껍게 만드는 원인 중 하나다. 느린 요청 하나가 뒤따르는 요청들의 응답 시간 분포 전체를 오른쪽으로 밀어버린다.
+
 참고: tail-latency-amplification.md, latency-vs-response-time.md
