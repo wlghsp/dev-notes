@@ -24,15 +24,15 @@
 
 ### Chapter 3 — Storage and Retrieval
 
-- [ ] hash-index.md — 인메모리 해시맵 기반 인덱스, Bitcask 방식
-- [ ] sstable.md — Sorted String Table, 키 정렬 보장 세그먼트 파일
-- [ ] lsm-tree.md — Log-Structured Merge Tree, write-optimized 저장 구조
-- [ ] b-tree.md — 페이지 단위 읽기/쓰기, 대부분 DB의 기본 인덱스 구조
-- [ ] write-amplification.md — 하나의 논리적 쓰기가 여러 번 물리 쓰기를 유발하는 현상
-- [ ] compaction.md — LSM-Tree에서 세그먼트를 병합해 공간 회수하는 과정
-- [ ] oltp-vs-olap.md — 트랜잭션 처리(OLTP)와 분석 처리(OLAP)의 차이
-- [ ] column-oriented-storage.md — 컬럼 단위 저장, OLAP 쿼리 최적화 원리
-- [ ] data-warehouse.md — 분석용 별도 저장소, ETL로 OLTP에서 데이터 적재
+- [x] hash-index.md — 인메모리 해시맵 기반 인덱스, Bitcask 방식
+- [x] sstable.md — Sorted String Table, 키 정렬 보장 세그먼트 파일
+- [x] lsm-tree.md — Log-Structured Merge Tree, write-optimized 저장 구조
+- [x] b-tree.md — 페이지 단위 읽기/쓰기, 대부분 DB의 기본 인덱스 구조
+- [x] write-amplification.md — 하나의 논리적 쓰기가 여러 번 물리 쓰기를 유발하는 현상
+- [x] compaction.md — LSM-Tree에서 세그먼트를 병합해 공간 회수하는 과정
+- [x] oltp-vs-olap.md — 트랜잭션 처리(OLTP)와 분석 처리(OLAP)의 차이
+- [x] column-oriented-storage.md — 컬럼 단위 저장, OLAP 쿼리 최적화 원리
+- [x] data-warehouse.md — 분석용 별도 저장소, ETL로 OLTP에서 데이터 적재
 
 ### Chapter 4 — Encoding and Evolution
 
