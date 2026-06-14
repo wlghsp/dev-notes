@@ -29,4 +29,4 @@ Bag-of-Words로는 이 차이를 포착하지 못한다.
 - RAG — 질문과 유사한 문서를 벡터 유사도로 검색할 때
 - 텍스트 분류, 클러스터링 — 문서를 숫자 벡터로 바꿔 ML 모델에 입력할 때
 
-참고: llm.md, rag.md
+참고: llm.md, rag.md, vector.md
