@@ -14,12 +14,12 @@
 
 ### Chapter 2 — Tokens and Embeddings
 
-- [ ] token.md — 모델이 처리하는 최소 단위, 단어/서브워드/문자/바이트 토큰 비교
-- [ ] tokenization.md — 텍스트를 토큰으로 분리하는 과정, BPE 등 알고리즘
-- [ ] vocabulary.md — 모델이 알고 있는 토큰 전체 집합
-- [ ] context-window.md — 모델이 한 번에 처리할 수 있는 최대 토큰 수
-- [ ] word2vec.md — 단어 임베딩 학습 알고리즘, 주변 단어 예측으로 의미 관계 포착
-- [ ] contextualized-embedding.md — 문맥에 따라 달라지는 임베딩, BERT 방식
+- [x] token.md — 모델이 처리하는 최소 단위, 단어/서브워드/문자/바이트 토큰 비교
+- [x] tokenization.md — 텍스트를 토큰으로 분리하는 과정, BPE 등 알고리즘
+- [x] vocabulary.md — 모델이 알고 있는 토큰 전체 집합
+- [x] context-window.md — 모델이 한 번에 처리할 수 있는 최대 토큰 수
+- [x] word2vec.md — 단어 임베딩 학습 알고리즘, 주변 단어 예측으로 의미 관계 포착
+- [x] contextualized-embedding.md — 문맥에 따라 달라지는 임베딩, BERT 방식
 
 ### Chapter 3 — Looking Inside Large Language Models
 
