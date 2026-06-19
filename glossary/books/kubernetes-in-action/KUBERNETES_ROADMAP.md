@@ -7,28 +7,48 @@
 
 ## Part 1 — 기초 (Ch 1~4)
 
-- [ ] Ch 1. Introducing Kubernetes — Kubernetes가 무엇인지, 왜 등장했는지, 아키텍처 개요
+- [x] Ch 1. Introducing Kubernetes — Kubernetes가 무엇인지, 왜 등장했는지, 아키텍처 개요
+  - ch01-introducing-kubernetes.md (종합)
+  - kubernetes.md
+  - borg-omega.md
+  - declarative-model.md
+  - control-plane.md
+  - worker-node.md
+
 - [ ] Ch 2. Understanding containers — 컨테이너 원리, namespace/cgroup, 이미지
+
 - [ ] Ch 3. Deploying your first application — 첫 배포 실습
+
 - [ ] Ch 4. Introducing Kubernetes API objects — API 오브젝트 개념, kubectl 기초
 
 ## Part 2 — 핵심 워크로드 (Ch 5~10)
 
 - [ ] Ch 5. Running workloads in Pods — Pod 개념과 실행
+
 - [ ] Ch 6. Managing the Pod lifecycle — Pod 생명주기
+
 - [ ] Ch 7. Attaching storage volumes to Pods — 볼륨
+
 - [ ] Ch 8. Persisting data in PersistentVolumes — PV/PVC
+
 - [ ] Ch 9. Configuration via ConfigMaps, Secrets, and the Downward API
+
 - [ ] Ch 10. Organizing objects using Namespaces and Labels
 
 ## Part 3 — 네트워크 & 운영 (Ch 11~17)
 
 - [ ] Ch 11. Exposing Pods with Services — Service 개념
+
 - [ ] Ch 12. Exposing Services with Ingress — Ingress
+
 - [ ] Ch 13. Replicating Pods with ReplicaSets
+
 - [ ] Ch 14. Managing Pods with Deployments
+
 - [ ] Ch 15. Deploying stateful workloads with StatefulSets
+
 - [ ] Ch 16. Deploying node agents and daemons with DaemonSets
+
 - [ ] Ch 17. Running finite workloads with Jobs and CronJobs
 
 ---
