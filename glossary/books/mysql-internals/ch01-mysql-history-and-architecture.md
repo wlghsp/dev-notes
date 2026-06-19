@@ -37,6 +37,8 @@
 11. Storage Engine Interface(handler)를 통해 실제 엔진 호출
 12. 결과를 Client/Server Protocol API로 클라이언트에 전송
 
+> 📷 Figure 1-1 (책 p.8) — MySQL 코어 모듈 전체 흐름도. Connection Manager부터 스토리지 엔진까지 내려가는 구조 다이어그램
+
 ## query와 command의 구분
 
 MySQL 내부 용어로 query는 파서를 거쳐야 하는 모든 SQL문이다. SELECT뿐 아니라 DELETE, INSERT도 query다. command는 파서 없이 Command Dispatcher가 직접 처리하는 요청으로, 데이터베이스 변경, 커넥션 종료, 복제 스트리밍 등이 해당한다.

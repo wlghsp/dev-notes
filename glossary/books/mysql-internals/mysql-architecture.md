@@ -10,6 +10,8 @@ MySQL 아키텍처는 공식 스펙이 있어서 설계된 게 아니다. Pachev
 
 query는 먼저 Query Cache를 거친다. 캐시 hit이면 파서까지 가지 않고 바로 반환된다. miss면 Parser가 SQL을 parse tree로 변환하고, Access Control이 권한을 확인한다. 그 다음 Table Manager가 테이블을 열고 락을 잡는다. SELECT는 Optimizer로, DML은 각 Table Modification Module로 간다. 최종적으로 Storage Engine Interface(handler)를 통해 실제 엔진을 호출한다.
 
+> 📷 Figure 1-1 (책 p.8) — MySQL 코어 모듈 전체 흐름도. Connection Manager부터 스토리지 엔진까지 내려가는 구조 다이어그램
+
 ## 두 개의 분리된 계층
 
 쿼리 처리 흐름에서 핵심은 handler 추상 클래스다. Optimizer와 Table Modification Module은 어떤 스토리지 엔진이 데이터를 저장하는지 모른다. handler 인터페이스만 호출할 뿐이다. 인터페이스 아래에서 InnoDB가 응답하든 MyISAM이 응답하든 상관없다.
