@@ -10,8 +10,9 @@ DB Internals(Petrov)나 DDIA의 이론이 MySQL에서 어떻게 구체화됐는�
 
 MySQL 전체 구조를 한 번에 잡는 챕터. 이후 모든 챕터의 지도가 된다.
 
-- [ ] mysql-architecture.md — MySQL의 주요 레이어 구조. 클라이언트 → 쿼리 파서 → 옵티마이저 → 스토리지 엔진
-- [ ] mysql-source-modules.md — 소스코드 주요 모듈과 역할. sql/, storage/, mysys/ 등 디렉토리 구조
+- [x] mysql-architecture.md — MySQL의 주요 레이어 구조. 클라이언트 → 쿼리 파서 → 옵티마이저 → 스토리지 엔진
+- [x] mysql-source-modules.md — 소스코드 주요 모듈과 역할. sql/, storage/, mysys/ 등 디렉토리 구조
+- [x] ch01-mysql-history-and-architecture.md — 챕터 1 종합 문서
 
 ---
 
@@ -19,9 +20,11 @@ MySQL 전체 구조를 한 번에 잡는 챕터. 이후 모든 챕터의 지도�
 
 MySQL 내부 코드를 이해하는 데 필요한 핵심 자료구조.
 
-- [ ] thd.md — Thread Handler. 클라이언트 커넥션 하나를 표현하는 핵심 구조체
-- [ ] mysql-table-structure.md — TABLE 클래스. MySQL이 테이블을 내부적으로 표현하는 방식
-- [ ] field-class.md — Field 클래스. 컬럼 하나를 표현하는 자료구조. 타입별 서브클래스
+- [x] thd.md — Thread Descriptor. 스레드 하나의 상태 전체를 담는 핵심 구조체
+- [x] net.md — Network Connection Descriptor. 클라이언트/서버 프로토콜 구현의 핵심
+- [x] mysql-table-structure.md — TABLE 클래스. 열린 테이블의 메타데이터와 런타임 상태
+- [x] field-class.md — Field 클래스. 컬럼 하나를 표현하는 추상 기반 클래스. 타입별 서브클래스
+- [x] ch03-core-classes-structures-apis.md — 챕터 3 종합 문서
 
 ---
 
@@ -110,5 +113,4 @@ MySQL 복제가 내부적으로 어떻게 동작하는가.
 ---
 
 진행 방식: Chapter 1 → 3 → 6 → 7 → 8 → 9 → 10 → 11 → 12 순서 권장.
-Chapter 2는 소스코드 빌드 환경 설정이라 스킵.
 완료된 항목은 [x]로 표시.
