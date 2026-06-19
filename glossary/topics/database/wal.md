@@ -48,7 +48,7 @@ Redo Log는 InnoDB 내부 포맷이라 외부에서 파싱하기 어렵다. Inno
 - 위치: Storage Engine 내부 — Transaction Manager
 - 목적: 두 가지. 롤백 + MVCC
 - 형식: 논리적. "이 row의 이전 값은 이것이었다"를 기록
-- 위치: InnoDB 시스템 테이블스페이스 또는 별도 undo tablespace
+- 저장: InnoDB 시스템 테이블스페이스 또는 별도 undo tablespace
 
 **롤백**: 트랜잭션이 실패하거나 명시적으로 ROLLBACK하면 Undo Log를 역방향으로 재적용해서 변경을 되돌린다.
 
