@@ -30,6 +30,17 @@ latency를 숨기는 것은 응답성이 중요한 시스템에서 핵심 전략
 
 ---
 
+## response time과의 차이
+
+response time은 클라이언트가 요청을 보낸 순간부터 응답을 받은 순간까지의 전체 시간이다. latency보다 넓은 개념이다.
+
+- latency — 작업 처리 자체에 걸리는 시간
+- response time — latency + 네트워크 왕복 + 그 외 부가 시간 (큐 대기 등)
+
+response time ⊇ latency다. 실무에서는 둘을 혼용하는 경우가 많고, "API latency"라고 해도 실제론 response time을 측정하는 경우가 대부분이다.
+
+---
+
 ## 한 줄 요약
 
 > latency = 작업 하나의 완료 시간. throughput과 독립적으로 움직인다.
