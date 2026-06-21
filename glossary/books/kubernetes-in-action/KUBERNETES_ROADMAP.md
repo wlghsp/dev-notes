@@ -15,7 +15,14 @@
   - control-plane.md
   - worker-node.md
 
-- [ ] Ch 2. Understanding containers — 컨테이너 원리, namespace/cgroup, 이미지
+- [x] Ch 2. Understanding containers — 컨테이너 원리, namespace/cgroup, 이미지
+  - ch02-understanding-containers.md (종합)
+  - container-image.md
+  - linux-namespace.md
+  - cgroup.md
+  - dockerfile.md
+  - container-registry.md
+  - oci.md
 
 - [ ] Ch 3. Deploying your first application — 첫 배포 실습
 
