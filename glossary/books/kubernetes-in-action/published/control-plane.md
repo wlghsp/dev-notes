@@ -8,8 +8,8 @@ Kubernetes 클러스터의 두뇌다. 클러스터 전체를 제어하는 컴포
 ## 구성 컴포넌트
 
 **API Server**
-클러스터의 단일 진입점. 개발자, 운영자, 그리고 다른 Kubernetes 컴포넌트들이 모두 API Server를 통해 통신한다. RESTful API를 제공한다. API Server 자체는 stateless다 — 상태는 etcd에 저장한다.
-
+클러스터의 단일 진입점. 개발자나 운영자가 클러스터를 조작할 때도, Kubernetes 내부 컴포넌트들이 상태를 읽고 쓸 때도 모두 API Server를 통한다. RESTful API를 제공한다. API Server 자체는 stateless다 — 상태는 etcd에 저장한다.
+ㅈ
 **etcd**
 클러스터의 모든 상태를 저장하는 분산 key-value 저장소다. API Server만 etcd에 직접 접근한다. 다른 컴포넌트들은 API Server를 통해서만 상태를 읽고 쓴다.
 

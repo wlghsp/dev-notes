@@ -12,11 +12,13 @@
 
 ## 스토리지 엔진 플러그인 구조가 생긴 경위
 
-처음에 MySQL은 트랜잭션이 없었다. 1999~2000년에 Berkeley DB를 통합해서 트랜잭션을 추가하려 했는데, Berkeley DB 인터페이스의 quirk들을 끝내 해결하지 못해 실패했다. 그런데 그 시도 덕분에 어떤 스토리지 엔진이든 플러그인처럼 붙일 수 있는 hooks가 코드에 남았다.
+처음에 MySQL은 트랜잭션이 없었다. 1999~2000년에 MySQL AB가 Sleepycat과 파트너십을 맺고 Berkeley DB를 통합해 트랜잭션을 추가하려 했다. MySQL 개발자들은 Berkeley DB 인터페이스의 quirk들을 끝내 해결하지 못했고, Berkeley DB 테이블은 끝내 안정화되지 않았다. 그러나 그 시도 자체는 헛되지 않았다. 그 과정에서 어떤 종류의 스토리지 엔진이든 플러그인처럼 붙일 수 있는 hooks가 MySQL 소스에 생겼다.
 
-그 직후 Heikki Tuuri가 자신의 InnoDB를 MySQL에 통합하겠다고 제안했다. 이미 닦아놓은 handler 인터페이스 덕분에 InnoDB는 훨씬 매끄럽게 통합됐다. MySQL 4.0에서 안정화되고 2003년 3월 production-stable 선언됐다.
+그 다음엔 NuSphere와 파트너십을 맺어 row-level locking을 지원하는 트랜잭션 엔진 Gemini를 추가하려 했으나, 2001년 말 소송으로 끝났다.
 
-즉, 플러그인 구조는 처음부터 설계한 게 아니라 실패한 Berkeley DB 통합의 부산물이다.
+비슷한 시기에 Heikki Tuuri가 자신의 스토리지 엔진 InnoDB를 통합하겠다고 제안했다. Berkeley DB 통합 과정에서 만들어진 handler 인터페이스 덕분에 InnoDB는 훨씬 매끄럽게 통합됐고, InnoDB 통합 과정에서 그 인터페이스는 한 단계 더 정제됐다. MySQL/InnoDB 조합은 version 4.0으로, 2003년 3월 production-stable 선언됐다.
+
+즉, 플러그인 구조는 처음부터 설계한 게 아니라 실패한 Berkeley DB 통합의 부산물이다. Berkeley DB → Gemini → InnoDB, 두 번의 실패를 거친 뒤에야 안착했다.
 
 ## 모듈 구조와 쿼리 처리 흐름
 
@@ -37,7 +39,6 @@
 11. Storage Engine Interface(handler)를 통해 실제 엔진 호출
 12. 결과를 Client/Server Protocol API로 클라이언트에 전송
 
-> 📷 Figure 1-1 (책 p.8) — MySQL 코어 모듈 전체 흐름도. Connection Manager부터 스토리지 엔진까지 내려가는 구조 다이어그램
 
 ## query와 command의 구분
 

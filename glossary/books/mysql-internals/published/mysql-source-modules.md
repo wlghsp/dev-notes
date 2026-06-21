@@ -1,4 +1,4 @@
-# MySQL Source Code Directory Layout
+# MySQL 소스 모듈별 역할
 
 MySQL 소스를 처음 열면 디렉토리가 많아서 어디서 봐야 할지 막막하다. 각 디렉토리가 왜 존재하는지 알면 탐색이 빠르다.
 
