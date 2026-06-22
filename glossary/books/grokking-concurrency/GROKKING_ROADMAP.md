@@ -25,9 +25,16 @@
 
 ## Chapter 3 — How Computers Work
 
-- [ ] processor.md — CPU 구조, 명령어 실행 사이클
-- [ ] runtime-system.md — OS와 런타임의 역할
-- [ ] instruction-level-parallelism.md — 명령어 수준 병렬성
+- [x] processor.md — CPU 구조, CU와 ALU 역할
+- [x] cache.md — 캐시 3단계(L1/L2/L3), 캐시 컨트롤러, scaled latency
+- [x] cpu-execution-cycle.md — Fetch-Decode-Execute-Store 4단계 사이클
+- [x] runtime-system.md — 런타임 시스템 개념, 컴퓨터 시스템 구성 요소
+- [x] operating-system.md — OS, 시스템 콜, user/kernel space
+- [x] instruction-level-parallelism.md — 명령어 수준 병렬성, 동시성 하드웨어 계층에서의 위치
+- [x] multiprocessor.md — 멀티프로세서, 멀티코어, SMP, 캐시 일관성(MESI)
+- [x] computer-cluster.md — 분산 메모리, loosely/tightly coupled
+- [x] flynns-taxonomy.md — SISD/MISD/SIMD/MIMD 분류 체계
+- [x] cpu-vs-gpu.md — CPU(MIMD) vs GPU(SIMD) 설계 차이와 적합한 작업 유형
 
 ## Chapter 4 — Building Blocks of Concurrency
 
