@@ -1,4 +1,4 @@
-# task-decomposition
+# task-decomposition (작업 분해)
 
 프로그램을 기능적으로 독립된 작업들로 쪼개어 동시에 실행할 수 있게 만드는 분해 방식.
 
