@@ -38,29 +38,29 @@
 
 ## Chapter 4 — Building Blocks of Concurrency
 
-- [ ] process.md — OS가 관리하는 실행 단위 (os-network/에 있으면 체크)
-- [ ] thread.md — 프로세스 내 독립적인 실행 흐름 (os-network/에 있으면 체크)
+- [x] process.md — OS가 관리하는 실행 단위, PCB, 프로세스 상태
+- [x] thread.md — 프로세스 내 독립적인 실행 흐름, 공유/비공유 자원
 
 ## Chapter 5 — Interprocess Communication
 
-- [ ] ipc.md — 프로세스 간 통신 방식 개요
-- [ ] shared-memory.md — 공유 메모리 기반 IPC
-- [ ] message-passing.md — 메시지 패싱 기반 IPC
-- [ ] thread-pool.md — 스레드 풀 패턴
+- [x] ipc.md — 프로세스 간 통신 방식 개요, 공유 메모리 vs 메시지 패싱
+- [x] shared-memory.md — 공유 메모리 기반 IPC, 동기화 책임
+- [x] message-passing.md — 메시지 패싱 기반 IPC, 동기/비동기, Erlang/Go
+- [x] thread-pool.md — 스레드 풀 패턴, 스레드 수 결정 기준
 
 ## Chapter 6 — Multitasking
 
-- [ ] multitasking.md — OS의 멀티태스킹 동작 방식
-- [ ] cpu-bound.md — CPU 연산이 병목인 작업
-- [ ] io-bound.md — I/O 대기가 병목인 작업
-- [ ] scheduler.md — OS 스케줄러 동작 원리
+- [x] multitasking.md — OS 멀티태스킹 동작 방식, preemptive 방식, context switching 비용
+- [x] cpu-bound.md — CPU 연산이 병목인 작업, 멀티코어로 성능 향상 가능
+- [x] io-bound.md — I/O 대기가 병목인 작업, 코어 추가보다 비동기 방식이 효과적
+- [x] scheduler.md — OS 스케줄러 동작 원리, ready queue, time-sharing, 4가지 목표
 
 ## Chapter 7 — Decomposition
 
-- [ ] task-decomposition.md — 작업을 독립 단위로 쪼개는 전략
-- [ ] data-decomposition.md — 데이터를 나눠 병렬 처리하는 전략
-- [ ] pipeline-pattern.md — 단계별 처리 파이프라인 패턴
-- [ ] granularity.md — 작업 분할의 세분화 정도
+- [x] task-decomposition.md — 기능별로 독립 작업으로 쪼개는 전략, 의존성 그래프, MIMD/MISD 적합
+- [x] data-decomposition.md — 데이터를 청크로 나눠 병렬 처리, map/fork-join/map-reduce 패턴
+- [x] pipeline-pattern.md — 단계별 처리 파이프라인, 스레드+큐 구현, 공유 자원 제한 시 유용
+- [x] granularity.md — 분해 세분화 정도, fine vs coarse 트레이드오프, agglomeration
 
 ## Chapter 8 — Race Conditions and Synchronization
 

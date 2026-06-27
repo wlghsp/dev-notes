@@ -93,15 +93,26 @@ Redo Log는 InnoDB 내부 물리 포맷이라 외부 도구가 읽기 어렵다.
 
 ## 세 로그 비교
 
-```
-          Redo Log         Undo Log         Binlog
-레이어    Storage Engine   Storage Engine   MySQL Server
-담당      Recovery Mgr     Transaction Mgr  Server Layer
-목적      Crash 복구       롤백 + MVCC      복제 + CDC
-형식      물리적           논리적           논리적 (SQL/ROW)
-보존      순환 덮어씀      트랜잭션 종료 후 명시적 purge 전까지
-외부 접근 어려움           어려움           가능 (공개 포맷)
-```
+**Redo Log**
+- 레이어: Storage Engine / Recovery Manager
+- 목적: Crash 복구
+- 형식: 물리적
+- 보존: 순환 덮어씀
+- 외부 접근: 어려움 (InnoDB 내부 포맷)
+
+**Undo Log**
+- 레이어: Storage Engine / Transaction Manager
+- 목적: 롤백 + MVCC
+- 형식: 논리적
+- 보존: 트랜잭션 종료 후 정리
+- 외부 접근: 어려움
+
+**Binlog**
+- 레이어: MySQL Server Layer
+- 목적: 복제 + CDC
+- 형식: 논리적 (SQL/ROW)
+- 보존: 명시적 purge 전까지 유지
+- 외부 접근: 가능 (공개 포맷)
 
 ---
 

@@ -117,23 +117,23 @@
 
 ## Chapter 22 — The Operating System
 
-- [ ] os-role.md — 운영체제의 역할, 하드웨어 추상화
-- [ ] file-system-basics.md — 파일 시스템 기초
+- [x] os-role.md — 운영체제의 역할, 하드웨어 추상화
+- [x] file-system-basics.md — 파일 시스템 기초
 
 ## Chapter 23 — Fixed Point, Floating Point
 
-- [ ] fixed-point.md — 고정소수점
-- [ ] floating-point-code.md — 부동소수점, 과학적 표기법의 이진 버전
+- [x] fixed-point.md — 고정소수점
+- [x] floating-point-code.md — 부동소수점, 과학적 표기법의 이진 버전
 
 ## Chapter 24 — Languages High and Low
 
-- [ ] assembly-language.md — 어셈블리, 기계어와 1:1 대응하는 언어
-- [ ] compiler-basics.md — 컴파일러, 고수준 언어를 기계어로
+- [x] assembly-language.md — 어셈블리, 기계어와 1:1 대응하는 언어
+- [x] compiler-basics.md — 컴파일러, 고수준 언어를 기계어로
 
 ## Chapter 25 — The Graphical Revolution
 
-- [ ] pixel.md — 픽셀, 화면의 최소 단위
-- [ ] bitmap.md — 비트맵, 픽셀 배열로 이미지 표현
+- [x] pixel.md — 픽셀, 화면의 최소 단위
+- [x] bitmap.md — 비트맵, 픽셀 배열로 이미지 표현
 
 ---
 

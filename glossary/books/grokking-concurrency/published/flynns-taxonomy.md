@@ -1,4 +1,4 @@
-# Flynn's Taxonomy
+# Flynn's Taxonomy (플린 분류법)
 
 컴퓨터 아키텍처를 명령어 흐름(instruction)과 데이터 흐름(data)의 수로 분류하는 체계. 병렬 하드웨어를 고를 때 판단 기준이 된다.
 
