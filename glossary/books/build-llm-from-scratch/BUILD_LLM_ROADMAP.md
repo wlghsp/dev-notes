@@ -21,14 +21,15 @@
 
 ### Chapter 2 — Working with Text Data
 
-- [ ] word-embedding.md — 단어를 연속 벡터 공간에 표현하는 방법, 의미 유사도 포착
-- [ ] tokenization-impl.md — 텍스트를 토큰으로 분리하는 구체적 구현 방법
-- [ ] token-id.md — 토큰을 정수 ID로 변환하는 과정, 어휘 사전과의 매핑
-- [ ] special-token.md — [BOS], [EOS], [PAD], [UNK] 등 특수 컨텍스트 토큰의 역할
-- [ ] bpe.md — Byte Pair Encoding, 서브워드 단위로 어휘를 구성하는 알고리즘
-- [ ] sliding-window-sampling.md — 슬라이딩 윈도우로 학습 데이터 샘플링하는 방식
-- [ ] token-embedding.md — 토큰 ID를 임베딩 벡터로 변환하는 임베딩 레이어
-- [ ] positional-encoding.md — 토큰 순서 정보를 임베딩에 추가하는 위치 인코딩
+- [x] word-embedding.md — 단어를 연속 벡터 공간에 표현하는 방법, 의미 유사도 포착
+- [x] tokenization-impl.md — 텍스트를 토큰으로 분리하는 구체적 구현 방법
+- [x] token-id.md — 토큰을 정수 ID로 변환하는 과정, 어휘 사전과의 매핑
+- [x] special-token.md — [BOS], [EOS], [PAD], [UNK] 등 특수 컨텍스트 토큰의 역할
+- [x] bpe.md — Byte Pair Encoding, 서브워드 단위로 어휘를 구성하는 알고리즘
+- [x] sliding-window-sampling.md — 슬라이딩 윈도우로 학습 데이터 샘플링하는 방식
+- [x] token-embedding.md — 토큰 ID를 임베딩 벡터로 변환하는 임베딩 레이어
+- [x] positional-encoding.md — 토큰 순서 정보를 임베딩에 추가하는 위치 인코딩
+- [x] ch02-working-with-text-data.md — Chapter 2 종합 복습 문서
 
 실습 체크포인트 (ch02 notebook):
 - [ ] 실습 2-1: 텍스트를 직접 토크나이저로 분리하고 token ID 목록 출력 확인 (§2.2~2.3)
