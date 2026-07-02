@@ -21,14 +21,14 @@
 - [x] data-center.md — 멀티 데이터센터, GeoDNS 라우팅, 장애 시 트래픽 전환
 - [x] message-queue.md — Producer-Consumer 비동기 처리, 컴포넌트 분리(decoupling)
 - [x] database-sharding.md — 수평 파티셔닝, 샤드 키 선택, Resharding·Celebrity·Join 문제
-- [ ] ch01-scale-from-zero.md — Chapter 1 종합 복습 문서
+- [x] ch01-scale-from-zero.md — Chapter 1 종합 복습 문서
 
 ### Chapter 2 — Back-of-the-Envelope Estimation
 
-- [ ] estimation-basics.md — 봉투 뒷면 계산의 기본 단위와 사고 방식
-- [ ] qps-estimation.md — QPS(Queries Per Second) 추정 방법
-- [ ] storage-estimation.md — 스토리지 용량 추정 방법
-- [ ] ch02-estimation.md — Chapter 2 종합 복습 문서
+- [x] estimation-basics.md — 봉투 뒷면 계산의 기본 단위와 사고 방식
+- [x] qps-estimation.md — QPS(Queries Per Second) 추정 방법
+- [x] storage-estimation.md — 스토리지 용량 추정 방법
+- [x] ch02-estimation.md — Chapter 2 종합 복습 문서
 
 ### Chapter 3 — A Framework for System Design Interviews
 
