@@ -36,11 +36,12 @@
 
 ### Chapter 4 — Encoding and Evolution
 
-- [ ] encoding.md — 인메모리 객체를 바이트 시퀀스로 변환하는 것 (직렬화)
-- [ ] schema-evolution.md — 스키마 변경 시 하위/상위 호환성 유지 방법
-- [ ] backward-forward-compatibility.md — backward(구버전이 신버전 데이터 읽기) / forward(신버전이 구버전 데이터 읽기)
-- [ ] protobuf-thrift-avro.md — 바이너리 인코딩 포맷 비교, 필드 태그와 스키마 처리 방식
-- [ ] dataflow.md — 데이터가 시스템 간 흐르는 방식 (DB / 서비스 / 메시지 큐)
+- [x] encoding.md — 인메모리 객체를 바이트 시퀀스로 변환하는 것 (직렬화)
+- [x] schema-evolution.md — 스키마 변경 시 하위/상위 호환성 유지 방법
+- [x] backward-forward-compatibility.md — backward(구버전이 신버전 데이터 읽기) / forward(신버전이 구버전 데이터 읽기)
+- [x] protobuf-thrift-avro.md — 바이너리 인코딩 포맷 비교, 필드 태그와 스키마 처리 방식
+- [x] dataflow.md — 데이터가 시스템 간 흐르는 방식 (DB / 서비스 / 메시지 큐)
+- [x] ch04-encoding-and-evolution.md — Chapter 4 종합 문서
 
 ---
 
