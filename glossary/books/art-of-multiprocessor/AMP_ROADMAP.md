@@ -10,12 +10,12 @@
 
 모든 동시성 논의의 출발점. 이 개념들이 없으면 이후 내용이 공허하다.
 
-- [ ] concurrency-why.md — 왜 멀티스레드 프로그래밍이 필요한가. 병렬성과 동시성의 차이
-- [ ] shared-object.md — 여러 스레드가 동시에 접근하는 객체. 공유가 왜 문제를 일으키는가
-- [ ] mutual-exclusion-problem.md — 임계구역에 한 번에 하나의 스레드만 진입해야 하는 이유
-- [ ] producer-consumer-problem.md — 생산자-소비자 문제. 버퍼를 사이에 둔 조율 문제
-- [ ] readers-writers-problem.md — 읽기/쓰기 충돌. 읽기끼리는 괜찮지만 쓰기는 독점이어야 하는 이유
-- [ ] parallelization-limits.md — 병렬화가 항상 빠른 게 아닌 이유. Amdahl's Law와의 연결
+- [x] concurrency-why.md — 왜 멀티스레드 프로그래밍이 필요한가. Amdahl's Law까지 포함해서 정리
+- [x] shared-object.md — 여러 스레드가 동시에 접근하는 객체. Counter 예시로 본 동시 접근 문제
+- [x] mutual-exclusion-problem.md — Alice&Bob 우화. 임계구역에 한 번에 하나의 스레드만 진입해야 하는 이유
+- [x] producer-consumer-problem.md — 생산자-소비자 문제. 버퍼를 사이에 둔 조율 문제
+- [x] readers-writers-problem.md — 읽기/쓰기 충돌. 대기 없는 해법이 가능한 유일한 경우
+- [x] parallelization-limits.md — concurrency-why.md에 Amdahl's Law로 통합, 별도 파일 생성하지 않음
 
 ---
 
