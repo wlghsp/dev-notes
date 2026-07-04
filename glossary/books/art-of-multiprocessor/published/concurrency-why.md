@@ -28,4 +28,4 @@ S = 1 / (1 - p + p/n)
 
 ---
 
-참고: shared-object.md, mutual-exclusion-problem.md
+참고: shared-object.md, mutual-exclusion-problem.md, reducing-sequential-bottleneck.md
