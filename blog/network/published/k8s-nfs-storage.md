@@ -55,7 +55,7 @@ sudo mount -t nfs 192.168.1.100:/exports/data /mnt/nfs
 
 ---
 
-## 4. K8s에서 왜 NFS가 필요한가
+## 3. K8s에서 왜 NFS가 필요한가
 
 K8s의 기본 동작 방식을 보면 문제가 명확해진다.
 
@@ -91,7 +91,7 @@ Pod가 어느 노드에 뜨든 동일한 `/exports/myapp-data`에 접근할 수 
 
 ---
 
-## 5. K8s가 NFS를 연결하는 방식 — PV / PVC
+## 4. K8s가 NFS를 연결하는 방식 — PV / PVC
 
 K8s는 스토리지를 **PersistentVolume(PV)** 과 **PersistentVolumeClaim(PVC)** 두 단계로 분리해서 관리한다.
 
@@ -164,7 +164,59 @@ spec:
 
 ---
 
-## 6. AccessMode — ReadWriteMany가 왜 중요한가
+## 4-1. StorageClass — PV를 자동으로 만드는 방법
+
+지금까지 본 방식은 **정적 프로비저닝(Static Provisioning)** 이다. 관리자가 PV를 미리 하나하나 만들어두고, PVC가 요청하면 매칭시키는 방식이다.
+
+문제는 PVC 요청이 올 때마다 관리자가 PV를 미리 준비해둬야 한다는 점이다. Pod가 늘어나고 스토리지 요청이 잦아지면 이 방식은 운영 부담이 커진다.
+
+**StorageClass**는 이 문제를 해결한다. "이런 종류의 스토리지가 필요하면 이 provisioner를 써서 자동으로 만들어라"라는 템플릿을 등록해두는 리소스다. PVC가 StorageClass를 지정해서 요청하면, PV를 관리자가 만드는 게 아니라 **provisioner가 자동으로 생성**한다. 이걸 **동적 프로비저닝(Dynamic Provisioning)** 이라고 한다.
+
+```mermaid
+flowchart TD
+    SC["StorageClass\nprovisioner: nfs-subdir-external-provisioner"]
+    Provisioner["NFS Provisioner\n(NFS 서버 위에 서브디렉토리 생성)"]
+    PVC["PersistentVolumeClaim\nstorageClassName: nfs-client\n10Gi 요청"]
+    PV["PersistentVolume\n(자동 생성됨)"]
+    Pod["Pod"]
+
+    PVC -->|StorageClass 지정| SC
+    SC -->|PV 생성 요청| Provisioner
+    Provisioner -->|PV 생성 + 매칭| PV
+    PV --> Pod
+```
+
+NFS는 K8s 기본 프로비저너에 포함되어 있지 않기 때문에, `nfs-subdir-external-provisioner` 같은 별도 provisioner를 클러스터에 설치해야 한다. 이 provisioner가 하는 일은 단순하다. PVC 요청이 들어오면 NFS 서버의 공유 디렉토리 밑에 요청마다 서브디렉토리(`/exports/data/pvc-xxxx`)를 만들고, 그 경로를 가리키는 PV를 자동으로 생성해서 PVC와 매칭시킨다.
+
+```yaml
+# StorageClass — 관리자가 한 번만 생성
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-client
+provisioner: cluster.local/nfs-subdir-external-provisioner
+parameters:
+  archiveOnDelete: "false"
+---
+# PVC — 개발자가 생성, PV는 자동 생성됨
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-dynamic
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+관리자는 StorageClass와 provisioner를 한 번만 세팅해두면 된다. 그 이후로는 개발자가 PVC만 만들면 PV는 신경 쓸 필요가 없다. 앞서 본 정적 프로비저닝(PV를 미리 만드는 방식)은 NFS 서버가 하나뿐이고 PV 개수가 적은 소규모 환경에서는 여전히 유효하지만, 실무 K8s 클러스터에서는 StorageClass를 통한 동적 프로비저닝이 훨씬 일반적이다.
+
+---
+
+## 5. AccessMode — ReadWriteMany가 왜 중요한가
 
 PV를 정의할 때 `accessModes`를 지정한다. 세 가지가 있다.
 
@@ -202,7 +254,7 @@ graph TD
 
 ---
 
-## 7. NFS의 한계
+## 6. NFS의 한계
 
 NFS가 편하긴 하지만 단점도 있다.
 
@@ -220,6 +272,6 @@ NFS는 네트워크 너머 디렉토리를 로컬처럼 마운트하는 프로�
 
 K8s에서 NFS를 쓰는 이유는 Pod가 어느 노드에 뜨든 같은 데이터에 접근할 수 있어야 하기 때문이다. 로컬 디스크는 노드에 종속되지만, NFS는 모든 노드가 공유한다.
 
-K8s는 PV/PVC라는 추상화 레이어를 두어 Pod가 NFS 서버 주소를 직접 알지 않아도 되게 한다. 관리자는 PV로 스토리지를 등록하고, 개발자는 PVC로 신청하며, K8s가 둘을 매칭시킨다.
+K8s는 PV/PVC라는 추상화 레이어를 두어 Pod가 NFS 서버 주소를 직접 알지 않아도 되게 한다. 관리자는 PV로 스토리지를 등록하고, 개발자는 PVC로 신청하며, K8s가 둘을 매칭시킨다. 실무에서는 관리자가 PV를 일일이 만드는 정적 방식보다, StorageClass와 provisioner로 PV를 자동 생성하는 동적 프로비저닝을 더 많이 쓴다.
 
 NFS가 온프레미스 K8s 환경에서 자주 쓰이는 건 설정이 단순하고 ReadWriteMany를 지원하기 때문이다.
