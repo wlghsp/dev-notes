@@ -8,13 +8,10 @@
 
 ## 완성된 문서
 
-| # | 문서 | 주제 |
-|---|------|------|
-| 1 | [java-vs-nodejs-thread-model.md](../java/java-vs-nodejs-thread-model.md) | Java 멀티스레드 vs Node.js 이벤트루프 — 구조부터 비교 |
-| 2 | [spring-mvc-thread-safety.md](./spring-mvc-thread-safety.md) | Spring MVC와 멀티스레드 — Tomcat, 스레드 안전성, @Async |
-| 3 | [spring-hidden-internals.md](./spring-hidden-internals.md) | Spring이 숨긴 내부 동작 — @Transactional, @Autowired, HikariCP |
-| 4 | [spring-design-patterns.md](./spring-design-patterns.md) | Spring이 숨긴 디자인 패턴 — Singleton, Proxy, Observer 등 |
-| 5 | [spring-webflux-event-loop.md](./spring-webflux-event-loop.md) | Spring WebFlux — Java도 이벤트루프를 쓴다 (Netty, Mono/Flux) |
+1. spring-mvc-thread-safety.md — Spring MVC와 멀티스레드: Tomcat, 스레드 안전성, @Async
+2. spring-hidden-internals.md — Spring이 숨긴 내부 동작: @Transactional, @Autowired, HikariCP
+3. spring-design-patterns.md — Spring이 숨긴 디자인 패턴: Singleton, Proxy, Observer 등
+4. spring-webflux-event-loop.md — Spring WebFlux: Java도 이벤트루프를 쓴다 (Netty, Mono/Flux)
 
 ---
 
