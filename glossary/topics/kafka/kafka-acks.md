@@ -31,3 +31,4 @@ ISR(In-Sync Replica)에 속한 모든 복제본이 메시지를 받아야 OK 응
 참고: idempotent-producer.md
 참고: at-least-once.md
 참고: exactly-once.md
+참고: kafka-isr.md

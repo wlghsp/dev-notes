@@ -15,11 +15,11 @@ partition-0 (replication factor = 3)
   broker-3: Follower
 ```
 
-producer는 항상 Leader에게만 쓴다. consumer도 기본적으로 Leader에서 읽는다. Follower는 Leader를 복제하는 역할만 한다.
+producer는 항상 Leader에게만 쓴다. consumer도 기본적으로 Leader에서 읽는다. Follower는 Leader를 복제하는 역할만 한다. 왜 복사본 중 하나만 쓰기를 받는 구조인지는 kafka-leader-follower.md 참고.
 
 ## ISR (In-Sync Replicas)
 
-Leader와 동기화 상태를 유지하고 있는 복제본 목록이다. Follower는 Leader의 메시지를 따라잡고 있으면 ISR에 속한다. 너무 뒤처지면 ISR에서 제외된다.
+Leader와 동기화 상태를 유지하고 있는 복제본 목록이다. Follower는 Leader의 메시지를 따라잡고 있으면 ISR에 속하고, 너무 뒤처지면 제외된다. 진입/이탈 조건과 min.insync.replicas, High Watermark와의 관계는 kafka-isr.md 참고.
 
 Leader가 죽으면 Kafka는 ISR 중 하나를 새 Leader로 선출한다. ISR에 속한 복제본은 Leader의 데이터를 거의 다 따라잡은 상태이므로, 새 Leader가 돼도 데이터 유실이 최소화된다.
 
@@ -42,3 +42,5 @@ broker-1(Leader)이 죽으면 Kafka의 컨트롤러가 ISR 중 하나를 새 Lea
 참고: kafka-partition.md
 참고: kafka-topic.md
 참고: kafka-acks.md
+참고: kafka-isr.md
+참고: kafka-leader-follower.md
