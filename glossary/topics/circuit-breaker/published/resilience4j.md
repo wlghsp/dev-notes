@@ -33,3 +33,4 @@ public Result call() { ... }
 참고: circuit-breaker.md
 참고: bulkhead.md
 참고: rate-limiter.md
+참고: functional-decorator.md
