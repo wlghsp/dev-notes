@@ -8,10 +8,12 @@ KubeVirt는 VM을 쿠버네티스 오브젝트로 다룰 수 있게 해주는 �
 
 KubeVirt가 `VirtualMachine`이라는 커스텀 리소스(CRD)를 만들면, 그 뒤에서 실제로는 `virt-launcher`라는 특수한 Pod가 뜬다. 이 Pod 안에서 QEMU/KVM 프로세스가 돌면서 실제 VM을 실행한다. 즉 VM 자체가 컨테이너로 바뀌는 게 아니라, "QEMU/KVM이라는 VM 실행 프로세스를 담은 Pod"를 쿠버네티스가 스케줄링·재시작·감시하는 방식이다. 참고: pod.md
 
-```
-VirtualMachine (CRD, 사용자가 선언)
-  └── virt-launcher Pod (쿠버네티스가 스케줄링하는 실제 단위)
-        └── QEMU/KVM 프로세스 — 실제 VM 실행
+```mermaid
+graph TD
+    VM["VirtualMachine (CRD, 사용자가 선언)"]
+    VL["virt-launcher Pod (쿠버네티스가 스케줄링하는 실제 단위)"]
+    QEMU["QEMU/KVM 프로세스 — 실제 VM 실행"]
+    VM --> VL --> QEMU
 ```
 
 이 구조 덕분에 `kubectl get pods`로 보면 VM도 Pod 하나로 보인다. VM이 죽으면 쿠버네티스가 Pod를 재스케줄링하듯 다시 띄우고, VM 간 통신도 쿠버네티스 Service/네트워킹을 그대로 쓴다. 참고: ovn-kubernetes.md
@@ -37,11 +39,7 @@ graph TD
 
 ## virt-launcher란 무엇인가
 
-virt-launcher는 VM 하나당 KubeVirt가 만드는 특수한 Pod다. 이름 그대로 "virt(virtualization)를 launch(실행)하는 것"이라는 뜻이다.
-
-이 Pod 안에는 `libvirtd`(가상화 관리 데몬)와 QEMU 프로세스가 함께 들어있고, 이 QEMU가 `/dev/kvm`을 통해 KVM에 접근해 실제 VM을 하드웨어 가속으로 실행한다. 참고: kvm.md
-
-virt-launcher는 "VM을 감싸는 컨테이너 포장지"라고 보면 된다. VM 자체가 컨테이너 기술로 바뀌는 게 아니라, 기존 QEMU/KVM 방식 그대로 VM을 돌리되 그 QEMU 프로세스를 쿠버네티스가 인식할 수 있는 Pod 틀 안에 가둬놓은 것이다. 그래서 쿠버네티스 입장에서는 "Pod 하나가 떠 있다"로만 보이고 일반 Pod처럼 스케줄링·재시작 대상이 되지만, 내부적으로는 그 Pod가 VM을 돌리고 있다는 특수성이 있다.
+virt-launcher는 VM 하나당 KubeVirt가 만드는 특수한 Pod로, VM의 생명주기와 1:1로 생성·종료된다. 자세한 내용은 virt-launcher.md 참고.
 
 ## 왜 이 방식을 택했나 — 성능이 아니라 운영 비용
 
@@ -58,5 +56,22 @@ virt-launcher는 "VM을 감싸는 컨테이너 포장지"라고 보면 된다. V
 RHOSO는 OpenStack의 관리 컴포넌트(Nova 등)만 컨테이너화해서 Pod로 올리고, 그 컴포넌트가 관리하는 실제 VM은 별도 컴퓨트 노드에서 전통적인 방식으로 돈다. 참고: rhoso.md
 
 KubeVirt는 다르다. VM을 실행하는 QEMU/KVM 프로세스 자체가 처음부터 Pod 안에서 돈다. 그래서 RHOV는 VM 자체가 OCP 클러스터의 스케줄링 대상이 되지만, RHOSO는 VM을 다루는 도구만 그렇게 된다는 차이가 앞서 나온 설명 그대로 여기서 확인된다.
+
+```mermaid
+graph TD
+    subgraph RHOSO["RHOSO"]
+        NovaPod["Nova 등 관리 컴포넌트 (Pod)"]
+        ComputeNode["별도 컴퓨트 노드"]
+        VM1["VM (전통적인 방식으로 실행)"]
+        NovaPod -->|관리| ComputeNode
+        ComputeNode --> VM1
+    end
+
+    subgraph RHOV["RHOV (KubeVirt)"]
+        VLPod["virt-launcher Pod"]
+        VM2["QEMU/KVM — VM 실행"]
+        VLPod --> VM2
+    end
+```
 
 참고: rhov.md, kvm.md, pod.md, rhoso.md, ocp.md, container-vs-vm.md
