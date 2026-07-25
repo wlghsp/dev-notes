@@ -31,7 +31,7 @@ CBOW보다 느리지만 드물게 등장하는 단어에서 더 나은 결과를
 king - man + woman ≈ queen
 paris - france + italy ≈ rome
 ```
-
+x
 단어 간의 의미 관계가 벡터 공간에서 방향과 거리로 인코딩된 결과다.
 
 ## 한계
