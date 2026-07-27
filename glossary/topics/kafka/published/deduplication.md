@@ -30,6 +30,14 @@ Kafka의 Idempotent Producer는 producer ID와 시퀀스 번호를 메시지에 
 
 소비자 측 중복은 소비자가 직접 처리해야 한다. 브로커가 소비자의 처리 결과를 알 수 없기 때문이다.
 
+## Elasticsearch로 쓸 때의 Deduplication
+
+Kafka에서 읽은 메시지를 Elasticsearch 같은 외부 저장소에 쓸 때는 Kafka 내부의 deduplication과 별개로, 싱크 쪽에서도 중복 제거를 설계해야 한다(참고: exactly-once.md의 "시스템 경계를 넘으면 보장이 깨진다").
+
+흔히 쓰는 방법은 원본 메시지의 필드 조합으로 해시값을 만들고, 그 해시값을 Elasticsearch 문서의 ID로 고정하는 것이다. 같은 메시지가 재전송돼도 같은 해시가 나오므로 같은 문서 ID를 가리키게 된다.
+
+이 상태에서 새 문서를 만드는 `create` 대신 `update`(또는 upsert)로 쓰면, 재전송된 메시지는 새 문서를 만드는 대신 기존 문서를 같은 내용으로 덮어쓴다. 결과적으로 몇 번을 재전송해도 최종 상태는 한 번 쓴 것과 같아진다 — Deduplication과 Idempotency를 함께 적용한 예다. 해시로 중복을 걸러내는 부분은 Deduplication이고, 중복이 들어와도 같은 결과가 되도록 upsert로 쓰는 부분은 Idempotency에 해당한다.
+
 ## Deduplication과 Idempotency의 차이
 
 - Idempotency: 작업 자체를 중복에 강하게 설계하는 것. 수신 측의 성질.
