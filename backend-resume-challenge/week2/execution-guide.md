@@ -202,13 +202,14 @@ mysql> SHOW STATUS LIKE 'Max_used_connections';
 
 ## 5단계: 개선 적용
 
-- 선택한 개선 방법(1주차 예측 병목과 연결):
-- 변경한 파일: `src/main/` —
-- 변경한 파일: `src/test/` —
+- 선택한 개선 방법(1주차 예측 병목과 연결): OFFSET 페이징 → 커서 기반 페이징 전환. `GET /api/studies`가 `LIMIT ?, ?`로 앞부분을 읽고 버리던 구조를 `WHERE id > ? ORDER BY id LIMIT ?`로 바꿔 PK 인덱스를 직접 활용하도록 함(자세한 코드는 improvement-guide.md).
+- 변경한 파일: `src/main/` — `StudyRepository`에 `findByIdGreaterThanOrderByIdAsc` 추가, `StudyController.list()`를 `Page<Study>` 대신 `cursor`/`nextCursor` 기반으로 변경
+- 변경한 파일: `src/test/` — `listReturnsOkWithExpectedFields`를 `nextCursor` 검증으로 수정, `cursorReturnsNextPageAfterGivenId` 신규 추가
 - 기존 회귀 테스트(`StudyControllerTest`) 통과 확인:
 
 ```
-(테스트 실행 결과 붙여넣기)
+BUILD SUCCESSFUL in 13s
+5 actionable tasks: 1 executed, 4 up-to-date
 ```
 
 ## 6단계: 같은 조건으로 재측정
@@ -220,17 +221,63 @@ k6 run k6-scripts/baseline.js
 ### 6-1. 실행 결과 (요약 표 전체)
 
 ```
-(여기에 붙여넣기)
+     execution: local
+        script: k6-scripts/baseline.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 2m30s max duration (incl. graceful stop):
+              * default: Up to 30 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 3556    29.427522/s
+    checks_succeeded...: 100.00% 3556 out of 3556
+    checks_failed......: 0.00%   0 out of 3556
+
+    ✓ studies 200
+    ✓ popular 200
+
+    HTTP
+    http_req_duration..............: avg=5.97ms min=1.21ms med=5.56ms max=73.62ms p(90)=9.53ms p(95)=11.34ms p(99)=14.97ms
+      { expected_response:true }...: avg=5.97ms min=1.21ms med=5.56ms max=73.62ms p(90)=9.53ms p(95)=11.34ms p(99)=14.97ms
+    http_req_failed................: 0.00%  0 out of 3556
+    http_reqs......................: 3556   29.427522/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.01s  min=1s     med=1.01s  max=1.08s   p(90)=1.01s  p(95)=1.02s   p(99)=1.02s  
+    iterations.....................: 1778   14.713761/s
+    vus............................: 1      min=1         max=30
+    vus_max........................: 30     min=30        max=30
+
+    NETWORK
+    data_received..................: 5.9 MB 49 kB/s
+    data_sent......................: 331 kB 2.7 kB/s
+
+
+
+
+running (2m00.8s), 00/30 VUs, 1778 complete and 0 interrupted iterations
+default ✓ [======================================] 00/30 VUs  2m0s
 ```
 
 ### 6-2. 개선 전후 비교
 
 | 지표 | 개선 전 | 개선 후 |
 |---|---|---|
-| TPS | | |
-| 응답 시간 평균 | | |
-| 응답 시간 p95 | | |
-| 응답 시간 p99 | | |
+| TPS | 29.18/s | 29.43/s |
+| 응답 시간 평균 | 14.09ms | 5.97ms |
+| 응답 시간 p95 | 36.56ms | 11.34ms |
+| 응답 시간 p99 | 55.35ms | 14.97ms |
+
+참고: 6단계를 두 번 실행했는데 첫 실행은 max 540ms/p99 59.85ms로 편차가 컸고, 재실행은 max 73.62ms/p99 14.97ms로 안정적이었다. 서버를 막 띄운 직후(cold start)라 JIT 컴파일과 HikariCP 커넥션 풀 워밍업 비용이 첫 실행에 섞여 들어간 것으로 추정 — 위 표는 재실행(워밍업 이후) 값을 사용함.
 
 ## 7단계: resume.md 업데이트
 

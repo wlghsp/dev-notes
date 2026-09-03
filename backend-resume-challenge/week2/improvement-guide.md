@@ -113,6 +113,78 @@ curl "localhost:8080/api/studies?cursor=0&size=20"
 
 이 로그가 evidence의 "개선 코드와 선택한 기법의 근거"에 들어갈 핵심 증거.
 
+```
+2026-09-03T15:39:02.165+09:00 DEBUG 25395 --- [nio-8080-exec-8] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title 
+    from
+        study s1_0 
+    where
+        s1_0.id>? 
+    order by
+        s1_0.id 
+    limit
+        ?
+2026-09-03T15:39:02.171+09:00 TRACE 25395 --- [nio-8080-exec-8] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [0]
+2026-09-03T15:39:02.171+09:00 TRACE 25395 --- [nio-8080-exec-8] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [20]
+```
+
 ## 5단계: k6 재측정
 
 execution-guide.md 6단계로 이동해서 baseline.js를 다시 실행. 다만 baseline.js가 `page=0&size=20`으로 고정되어 있다면, 커서 파라미터에 맞게 스크립트도 함께 수정이 필요할 수 있음 — `k6-scripts/baseline.js`의 요청 URL을 `?cursor=&size=20` 형태로 맞춰야 개선 후 API를 정확히 때림.
+
+```
+     execution: local
+        script: k6-scripts/baseline.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 2m30s max duration (incl. graceful stop):
+              * default: Up to 30 looping VUs for 2m0s over 3 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 3532    29.360965/s
+    checks_succeeded...: 100.00% 3532 out of 3532
+    checks_failed......: 0.00%   0 out of 3532
+
+    ✓ studies 200
+    ✓ popular 200
+
+    HTTP
+    http_req_duration..............: avg=9.06ms min=1.1ms med=5.83ms max=540.27ms p(90)=12.94ms p(95)=18.24ms p(99)=59.85ms
+      { expected_response:true }...: avg=9.06ms min=1.1ms med=5.83ms max=540.27ms p(90)=12.94ms p(95)=18.24ms p(99)=59.85ms
+    http_req_failed................: 0.00%  0 out of 3532
+    http_reqs......................: 3532   29.360965/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.01s  min=1s    med=1.01s  max=1.61s    p(90)=1.02s   p(95)=1.04s   p(99)=1.18s  
+    iterations.....................: 1766   14.680483/s
+    vus............................: 1      min=1         max=30
+    vus_max........................: 30     min=30        max=30
+
+    NETWORK
+    data_received..................: 5.9 MB 49 kB/s
+    data_sent......................: 329 kB 2.7 kB/s
+
+
+
+
+running (2m00.3s), 00/30 VUs, 1766 complete and 0 interrupted iterations
+default ✓ [======================================] 00/30 VUs  2m0s
+```
