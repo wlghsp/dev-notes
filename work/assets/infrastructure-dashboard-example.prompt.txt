@@ -1,0 +1,11 @@
+Generation tool: built-in image_gen
+
+Use case: ui-mockup
+Asset type: planning-document illustration
+Primary request: Korean desktop infrastructure dashboard, showing resource capacity, allocation trend, items needing review, tenant storage share, and allocation versus actual usage.
+Style/medium: polished enterprise UI mockup, light cool gray background, white panels, dark navy typography, teal charts, amber warnings, red critical status only.
+Composition/framing: landscape 16:10, flat front view, no device frame.
+Text (verbatim): "인프라 운영 현황", "CPU", "메모리", "스토리지", "확인 대상", "스토리지 할당 추이", "기관별 스토리지 점유", "할당 대비 실사용".
+Constraints: dashboard values are illustrative; show cards, a time-series chart, alert list, horizontal bar ranking, and an allocation-versus-usage panel; no decorative illustrations, 3D, or dense tiny text.
+
+Final edit: Change chart legend "실제 사용량" to "관측 할당량", and "전체 할당량 (500 TiB)" to "할당 가능 총량 (500 TiB)". Preserve the remaining layout.
