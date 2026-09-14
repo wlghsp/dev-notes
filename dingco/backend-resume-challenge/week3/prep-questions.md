@@ -8,29 +8,39 @@ missions/README.md Week 3("신청 검색 API를 실행 계획으로 개선하기
 
 - `GET /api/enrollments/search?from=&to=&status=&minFee=`는 실제로 어떤 조건으로 `study_enrollment`를 조회하는가? (`EnrollmentRepository.search`의 JPQL — `enrolledAt between`, `status =`, `fee >=`)
 
-:
+```
+   where e.enrolledAt between :from and :to
+              and e.status = :status
+              and e.fee >= :minFee
+            order by e.enrolledAt desc
+```
 
 - 같은 API가 `count`도 함께 반환하는데, 이 `countSearch`는 `search`와 조건이 같은가 다른가? 같다면 어떤 의미가 있는가? (3주차는 이 둘이 같은 인덱스의 영향을 받는다고 리포지토리 주석에 적혀 있다)
 
-:
+```
+  where e.enrolledAt between :from and :to
+              and e.status = :status
+              and e.fee >= :minFee
+```
+order by 가 없음 count이므로 정렬이 필요없음
 
 - `schema.sql` 주석에 "인덱스는 PRIMARY KEY 외에 일부러 만들지 않았다"고 적혀 있다. `study_enrollment` 테이블에 지금 인덱스가 없다는 걸 어디서 확인할 수 있는가?
 
-:
+: schema.sql 에 없다는걸 확인 가능. 
 
 - `GET /api/enrollments/stats`의 회원별 집계는 어떤 컬럼으로 group by 하고 어떤 조건(`WHERE`)을 먼저 거르는가?
 
-:
+:e.member.id 으로 groupby,  e.fee >= :minFee
 
 ## 2. 실행 계획(EXPLAIN) 읽기
 
 - EXPLAIN을 뜨려면 어떤 도구/방법을 쓸 수 있는가? (MySQL 콘솔에서 직접 `EXPLAIN SELECT ...`, 또는 Hibernate SQL 로그로 나온 쿼리를 그대로 복사해서 실행)
 
-:
+MySQL 콘솔에서 직접 `EXPLAIN SELECT ...`, 또는 Hibernate SQL 로그로 나온 쿼리를 그대로 복사해서 실행
 
 - EXPLAIN 결과에서 "풀 스캔이 일어나고 있다"는 것은 어떤 필드로 판단하는가? (`type` 컬럼이 `ALL`인지, `rows` 값이 테이블 전체 행 수에 가까운지, `key`가 `NULL`인지)
 
-:
+: type 컬럼 ALL인지, rows 값이 테이블 전체 행 수에 가까운지, key 가 NULL인지
 
 - `where ... between ... and status = ... and fee >= ...`처럼 조건이 3개인 쿼리에서, 복합 인덱스의 컬럼 순서를 정할 때 무엇을 먼저 봐야 하는가? (등치 조건(`=`)과 범위 조건(`between`, `>=`)이 인덱스 활용에서 다르게 취급된다는 점 — `status =`는 등치, `enrolledAt between`과 `fee >=`는 범위)
 
@@ -48,49 +58,50 @@ missions/README.md Week 3("신청 검색 API를 실행 계획으로 개선하기
 
 - 강의가 "정답 인덱스를 그대로 베끼지 말라"고 한 이유는 무엇인가? 본인이 설계한 인덱스와 강의 예시가 다를 수 있는 지점은 어디인가? (이 프로젝트의 `status` 값 분포, `fee` 범위, 실제 조회 패턴에 따라 컬럼 순서가 달라질 수 있음)
 
-:
+:  데이터의 분포와 조회 패턴에 따라 최적의 인덱스(Index) 구조가 완전히 달라지기 때문입니다.
 
 - 인덱스 DDL은 어디에 추가해야 하는가? (`src/main/resources/` 아래, `schema.sql`에 직접 추가하거나 별도 마이그레이션 파일)
 
-:
+: schema.sql 에 추가
 
 ## 4. stats API와 집계 테이블/반정규화
 
 - `stats` 쿼리는 `search`와 성격이 다르다 — 무엇이 다른가? (조건 조회가 아니라 전체 그룹 집계라는 점, 인덱스만으로 해결이 안 될 수 있다는 점)
 
-:
+: 조건 조회가 아니라 전체 그룹 집계. 인덱스만으로 해결이 안 될 수 있음
 
 - "인덱스만으로 한계가 있다면 집계 테이블이나 반정규화 중 하나를 선택"하라는 게 무슨 뜻인가? 이 둘의 차이는 무엇인가? (집계 테이블: 별도 테이블에 미리 계산된 값을 저장 / 반정규화: 원본 테이블에 계산된 컬럼을 추가)
 
-:
+: 인덱스만으로 성능 개선이 안된다면, 조회 효율화를 하는 것임. 집계 테이블은 별도 테이블에 미리 계산된 값을 저장
+반정규화는 원본 테이블에 계산된 컬럼을 추가
 
 - 이 프로젝트에서 `study.enrolled_count`처럼 이미 반정규화된 컬럼이 있는가? 있다면 그 패턴을 `stats`에도 적용할 수 있는가?
 
-:
+:count, sum(fee), max(enrolledAt) 가능
 
 ## 5. 측정과 재현성 (1~2주차와 동일 원칙)
 
 - 이번 주차 측정에서 "같은 조건"이란 무엇을 고정해야 하는가? (시드 규모 `app.seed.enrollments`, 요청 파라미터, 워밍업 여부 — 1주차와 같은 원칙)
 
-:
+: 시드 데이터 규모, 요청 파라미터(파이프라인 단계), 그리고 워밍업 수행 여부
 
 - 개선 전/후 EXPLAIN을 비교할 때, 무엇이 같아야 "같은 조건에서 비교했다"고 말할 수 있는가?
 
-:
+: 데이터의 통계 정보, 입력되는 쿼리 조건, 그리고 DBMS 환경 동일
 
 - src/test/ 회귀 테스트는 이번 주차에 무엇을 고정해서 검증해야 하는가? (인덱스를 걸기 전/후로 조회 결과 자체는 동일해야 한다는 것)
 
-:
+: 인덱스 적용 전과 후의 조회 결과(데이터의 내용과 개수)를 고정
 
 ## 6. 리뷰 반영 (1~2주차 review-notes.md 체크리스트 적용)
 
 - 1~2주차에서 반복 지적된 "## 리뷰 반영" 공백 문제를 이번 주차에 어떻게 방지할 것인가?
 
-:
+: 기존 주차의 반영 사항을 기록함 
 
 - 이번 주차 회귀 테스트가 검증하는 대상 로직(인덱스 적용 전/후 동일 결과)을 evidence에서 어떻게 소스 경로 + 코드로 보여줄 것인가?
 
-:
+: 따로 로그를 기록한 파일을 만들어두고 evidence에서 이를 가리킴
 
 ## 7. 근거형 질문 준비 (미션 질문 1~4)
 
