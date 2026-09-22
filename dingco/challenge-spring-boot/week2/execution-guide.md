@@ -334,6 +334,69 @@ public class CallCountingAspect {
 
 `directlyCreatedServiceBypassesAdvice` 테스트에서 `new TodoService(new InMemoryTodoRepository())`를 쓰는 이유: `JdbcTodoRepository`는 `JdbcTemplate`이 필요해서 직접 `new`하기 번거롭지만, `InMemoryTodoRepository`는 인자 없이 바로 만들 수 있어 이 테스트를 가볍게 유지한다. 1번에서 만든 메모리 구현체가 여기서 재사용된다.
 
+## 4. 선택 확장 — @PreDestroy 소멸 콜백
+
+필수 2번(`@PostConstruct`, 초기화 시점)과 짝을 이루는 종료 시점 콜백을 추가한다. "컨테이너가 관리하는 경계를 한 가지 더 비교"하라는 선택 확장 요구를, 이미 만든 생명주기 테스트 구조를 그대로 재사용해서 채운다.
+
+### Red — 테스트부터 작성
+
+`@PreDestroy`는 컨테이너가 **종료될 때** 호출되므로, 컨텍스트를 살아있는 채로 두고 관찰할 수 없다. 별도의 `AnnotationConfigApplicationContext`를 직접 띄우고 닫아서, "닫히는 순간" 콜백이 불렸는지 확인해야 한다.
+
+```java
+package co.dingcodingco.challenge.todo;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+class TodoServiceDestroyLifecycleTest {
+
+    @Test
+    void containerBeanRunsPreDestroyOnContextClose() {
+        TodoService service;
+        try (AnnotationConfigApplicationContext context =
+                 new AnnotationConfigApplicationContext(SingleRepositoryConfig.class)) {
+            service = context.getBean(TodoService.class);
+            assertThat(service.isDestroyed()).isFalse();
+        }
+        // try 블록을 벗어나며 context.close()가 호출된 뒤
+        assertThat(service.isDestroyed()).isTrue();
+    }
+
+    @Test
+    void directlyCreatedObjectNeverRunsPreDestroy() {
+        TodoService rawService = new TodoService(new InMemoryTodoRepository());
+
+        // 컨테이너를 거치지 않았으니 어떤 시점에도 호출될 일이 없다
+        assertThat(rawService.isDestroyed()).isFalse();
+    }
+
+    @Configuration
+    static class SingleRepositoryConfig {
+        @Bean
+        TodoRepository todoRepository() {
+            return new InMemoryTodoRepository();
+        }
+
+        @Bean
+        TodoService todoService(TodoRepository todoRepository) {
+            return new TodoService(todoRepository);
+        }
+    }
+}
+```
+
+이 테스트에서 `@Primary`/`@Qualifier` 없이 `TodoRepository` 빈을 하나만 등록한 이유: 여기서 검증하려는 건 모호성이 아니라 생명주기이므로, 필수 1번 문제와 섞이지 않도록 후보를 하나로 좁혔다.
+
+### Green — 직접 작성할 것
+
+`TodoService`에 `@PreDestroy`가 붙은 메서드를 추가한다. `@PostConstruct`로 이미 만든 `initialized` 필드와 같은 패턴으로 `destroyed` 필드와 `isDestroyed()`를 만들면 된다.
+
+컨테이너가 이 콜백을 호출하는 시점은 `ApplicationContext`가 닫힐 때(`close()` 호출 또는 JVM 종료 훅)다. `@SpringBootTest`로 띄운 컨텍스트는 테스트 클래스 실행 중엔 안 닫히므로, 이 콜백을 직접 관찰하려면 위 테스트처럼 `AnnotationConfigApplicationContext`를 스스로 열고 닫아야 한다 — `@PostConstruct`를 `@SpringBootTest`로 편하게 검증했던 것과 달리, `@PreDestroy`는 컨텍스트 생명주기를 직접 다뤄야 관찰 가능하다는 차이를 여기서 확인하게 된다.
+
 ## 다음 단계
 
 1. 네 파일(모호성/생명주기/AOP proxy/AOP count) 테스트가 모두 통과하는지 확인
