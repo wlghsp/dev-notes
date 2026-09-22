@@ -13,6 +13,85 @@
 
 `EnrollmentController.enroll()`은 `POST /api/enrollments/studies/{studyId}?memberId=`로 이미 노출되어 있으므로 컨트롤러 변경은 필요 없다.
 
+## 0-1. 선행 수정: `MemberEnrollmentStatsRepository.increment()`가 테스트 환경(H2)에서 깨짐
+
+2단계 테스트를 실제로 돌려본 결과 드러난 기존 버그다. `src/test/resources/application.yml`은 테스트를 MySQL 없이 H2(`MODE=MySQL`)로 돌리도록 되어 있는데, `MemberEnrollmentStatsRepository.increment()`(`MemberEnrollmentStatsRepository.java`)가 MySQL 8 전용 `INSERT ... VALUES (...) AS incoming ON DUPLICATE KEY UPDATE ...` 문법을 쓴다. H2는 이 문법을 파싱하지 못해 `enroll()`을 호출하는 모든 요청이 500으로 죽는다(`BadSqlGrammarException`). 3주차 테스트는 `enroll()`을 거치지 않고 리포지토리에 직접 데이터를 넣는 방식이라 이 문제가 지금까지 드러나지 않았다.
+
+`increment()`를 UPDATE 시도 후 영향받은 행이 없으면 INSERT하는 방식으로 바꿔 MySQL과 H2 양쪽에서 동일하게 동작하도록 고쳤다.
+
+```java
+package co.dingcodingco.studypass.enrollment;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Repository
+public class MemberEnrollmentStatsRepository {
+    private final JdbcTemplate jdbcTemplate;
+
+    public MemberEnrollmentStatsRepository(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public List<MemberEnrollmentStats> findByMinFee(int minFee) {
+        return jdbcTemplate.query(
+                """
+                    SELECT member_id,
+                           SUM(enrollment_count) AS enrollment_count,
+                           SUM(total_fee) AS total_fee,
+                           MAX(last_enrolled_at) AS last_enrolled_at
+                    FROM member_enrollment_fee_stats
+                    WHERE fee >= ?
+                    GROUP BY member_id
+                    ORDER BY enrollment_count DESC
+                    LIMIT 50
+                    """,
+                (rs, row) -> new MemberEnrollmentStatsRow(
+                        rs.getLong("member_id"),
+                        rs.getLong("enrollment_count"),
+                        rs.getLong("total_fee"),
+                        rs.getTimestamp("last_enrolled_at").toLocalDateTime()
+                ), minFee
+        );
+    }
+
+    /**
+     * MySQL 전용 INSERT ... ON DUPLICATE KEY UPDATE 대신, PK(member_id, fee) 존재 여부에
+     * 따라 UPDATE 또는 INSERT를 선택하는 방식으로 바꿨다. MySQL과 테스트용 H2(MODE=MySQL)
+     * 양쪽에서 동일하게 동작한다.
+     */
+    public void increment(Long memberId, int fee, LocalDateTime enrolledAt) {
+        int updated = jdbcTemplate.update(
+                """
+                UPDATE member_enrollment_fee_stats
+                SET enrollment_count = enrollment_count + 1,
+                    total_fee = total_fee + ?,
+                    last_enrolled_at = CASE
+                        WHEN last_enrolled_at >= ? THEN last_enrolled_at
+                        ELSE ?
+                    END
+                WHERE member_id = ? AND fee = ?
+                """,
+                fee, enrolledAt, enrolledAt, memberId, fee);
+
+        if (updated == 0) {
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO member_enrollment_fee_stats
+                        (member_id, fee, enrollment_count, total_fee, last_enrolled_at)
+                    VALUES (?, ?, 1, ?, ?)
+                    """,
+                    memberId, fee, fee, enrolledAt);
+        }
+    }
+}
+```
+
+주의할 점: UPDATE-then-INSERT 방식은 같은 `(memberId, fee)` 조합으로 두 트랜잭션이 동시에 처음 들어오면, 둘 다 UPDATE에서 0건(아직 행이 없어서)을 보고 둘 다 INSERT를 시도해 PK 중복 에러가 날 수 있다. 4주차 동시성 테스트는 매번 서로 다른 회원을 새로 만들어 같은 `(memberId, fee)`가 동시에 부딪히지 않으므로 지금 재현 테스트에는 영향이 없지만, 실제 운영에서 같은 회원이 같은 fee로 정확히 동시에 신청하는 경우까지 고려한다면 이 메서드도 별도 동시성 보완이 필요하다는 점은 evidence에 한계로 남긴다.
+
 ## 1단계: 브랜치 생성
 
 `submit/week-04__weekly-pr` 브랜치 생성 및 체크아웃 완료.
@@ -67,6 +146,9 @@ class EnrollmentConcurrencyTest {
     @Autowired
     private StudyRepository studyRepository;
 
+    @Autowired
+    private EnrollmentRepository enrollmentRepository;
+
     @DisplayName("단일 스레드로 capacity만큼 순차 신청하면 전부 성공하고 정원을 넘기지 않는다")
     @Test
     void sequentialEnrollDoesNotExceedCapacity() {
@@ -119,11 +201,12 @@ class EnrollmentConcurrencyTest {
         executor.shutdown();
 
         Study reloaded = studyRepository.findById(study.getId()).orElseThrow();
+        long savedEnrollmentCount = enrollmentRepository.countByStudyId(study.getId());
 
         // 개선 전에는 assert로 강제하지 않고, 실제로 넘긴 값을 그대로 기록해 evidence에 옮긴다.
         System.out.printf(
-                "[개선 전] successCount=%d, enrolledCount=%d, capacity=%d%n",
-                successCount.get(), reloaded.getEnrolledCount(), CAPACITY);
+                "[개선 전] successCount=%d, savedEnrollmentCount=%d, enrolledCount=%d, capacity=%d%n",
+                successCount.get(), savedEnrollmentCount, reloaded.getEnrolledCount(), CAPACITY);
     }
 
     private ResponseEntity<Void> enroll(Long studyId, Long memberId) {
@@ -168,7 +251,35 @@ class EnrollmentConcurrencyTest {
 
 ## 4단계: 락 전략 선택 및 구현
 
-미션은 낙관적/비관적 중 **하나만** 선택하면 된다. 이 프로젝트 상황(짧은 트랜잭션, 인기 스터디에 순간적으로 요청이 몰림)에서는 비관적 락이 기본 후보다 — 경합이 몰리는 짧은 트랜잭션은 재시도 로직 없이 대기만으로 정합성을 보장하기 쉽다. 최종 선택 근거는 실측(성공 수·재시도 수) 후 prep-questions 4번에 적는다.
+**순서 주의**: 아래 4-A/4-B는 `EnrollmentService.enroll()`을 그 자리에서 락 버전으로 교체한다. 즉 교체하고 나면 저장소에는 "개선 전 코드"가 더 이상 남아 있지 않다(3주차 search/stats 개선 때도 같은 방식 — `EnrollmentRepository`의 원래 쿼리를 인덱스 적용 후 쿼리로 그대로 바꿨다). 그래서 **2단계에서 만든 `concurrentEnrollCanExceedCapacityBeforeFix()`를 반드시 이 교체 전에 먼저 실행해서 결과(성공 수·savedEnrollmentCount·enrolledCount)를 기록해둔다.** 교체 후에는 같은 테스트를 다시 돌려도 이미 락이 걸려 있어 "개선 전" 상황이 재현되지 않는다.
+
+- [ ] `enroll()` 교체 전, `concurrentEnrollCanExceedCapacityBeforeFix()` 실행 결과를 evidence용으로 별도 기록
+- [ ] 기록 후에만 아래 4-A 또는 4-B로 `EnrollmentService.enroll()`을 교체
+
+미션 필수 요건은 낙관적/비관적 중 **하나만** 선택하는 것이지만, 선택 확장 5번("두 번째 전략을 같은 조건에서 비교")이 이미 "둘 다 구현해서 비교"를 예상한 길이다. 이 가이드는 둘 다 구현하는 순서로 안내한다.
+
+**구조**: `EnrollmentService.enroll()`은 최종 채택한 전략만 남긴다(운영 코드는 하나, 기존 `POST /api/enrollments/studies/{studyId}` 경로가 그대로 이걸 탄다). 비교용으로 만드는 낙관적 락은 별도 클래스 `EnrollmentOptimisticFacade`로 분리하고, 이를 실제로 호출하는 **비교 전용 엔드포인트**(예: `POST /api/enrollments/studies/{studyId}/optimistic`)를 `EnrollmentController`에 추가한다. 이렇게 하면 기존 `EnrollmentConcurrencyTest`가 쓰는 `TestRestTemplate` + HTTP 호출 방식을 그대로 재사용해 두 전략을 같은 조건으로 비교할 수 있다. 두 구현이 최종 PR에 함께 남으므로, "실제 서비스가 쓰는 경로는 어느 쪽인지"를 evidence에 명시해야 리뷰에서 "왜 두 구현이 다 있나"라는 지적을 방어할 수 있다.
+
+권장 순서:
+
+1. 4-A(비관적 락)를 `EnrollmentService.enroll()`에 먼저 적용하고, 6단계 검증까지 마쳐 개선 후 수치를 확보한다.
+2. `EnrollmentService.enroll()`은 그대로 둔 채, 4-B(낙관적 락)를 별도 클래스 `EnrollmentOptimisticFacade`로 새로 만든다(아래 4-B 코드의 클래스명을 `EnrollmentService` 대신 `EnrollmentOptimisticFacade`로 바꾸고, 같은 필드·생성자 구조를 그대로 쓴다).
+3. `EnrollmentController`에 `EnrollmentOptimisticFacade`를 호출하는 비교 전용 엔드포인트를 추가한다.
+
+   ```java
+   @PostMapping("/studies/{studyId}/optimistic")
+   public Map<String, Object> enrollOptimistic(
+           @PathVariable Long studyId, @RequestParam Long memberId) {
+       Long id = enrollmentOptimisticFacade.enroll(studyId, memberId);
+       return Map.of("enrollmentId", id);
+   }
+   ```
+
+   `EnrollmentController` 생성자에 `EnrollmentOptimisticFacade` 의존성을 추가로 주입받는다.
+4. `EnrollmentConcurrencyTest`에 이 엔드포인트(`/optimistic`)를 호출하는 동일 조건(capacity·스레드 수·`CountDownLatch` 구조) 테스트를 추가해 재시도 수까지 포함해 측정한다. 기존 `enroll()` 헬퍼 메서드를 복사해 경로만 `/optimistic`으로 바꾼 버전을 쓰면 된다.
+5. 두 결과(정합성·성공 수·재시도 수)를 evidence-draft.md의 "선택 근거" 표로 비교하고, 이 프로젝트 상황(짧은 트랜잭션, 순간적으로 몰리는 요청)에 비춰 `EnrollmentService.enroll()`에 최종 남길 전략을 확정한다. 이 프로젝트 상황상 비관적 락이 기본 후보다 — 경합이 몰리는 짧은 트랜잭션은 재시도 로직 없이 대기만으로 정합성을 보장하기 쉽다.
+
+필수 항목만 먼저 통과시키고 싶다면 1번까지만 하고 넘어가도 된다. 아래 4-A/4-B는 각 전략의 기준 코드이며, 비교 구조로 갈 때는 4-B를 위 2~3번처럼 별도 클래스·별도 엔드포인트로 재배치한다.
 
 ### 4-A. 비관적 락으로 구현할 경우
 
@@ -267,6 +378,8 @@ public class EnrollmentService {
 
 ### 4-B. 낙관적 락으로 구현할 경우
 
+비교 구조로 간다면(위 "권장 순서" 참고) 아래 `EnrollmentService`는 `EnrollmentOptimisticFacade`라는 새 클래스로 만든다 — 기존 `EnrollmentService.enroll()`(비관적 락, 4-A)은 그대로 두고 이 클래스를 추가하는 것이다. 필수 항목만 하고 낙관적 락 하나만 최종 채택한다면 이 클래스명을 `EnrollmentService`로 그대로 쓰고 기존 파일을 교체하면 된다.
+
 `Study.java`에 버전 컬럼을 추가한다. 기존 필드·생성자·메서드는 그대로 두고 필드만 더한다.
 
 ```java
@@ -304,7 +417,9 @@ ALTER TABLE study ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 
 `schema.sql` 자체를 고쳐도 이미 떠 있는 DB에는 반영되지 않으므로(3주차 인덱스 작업 때와 동일), 개발 DB에는 위 `ALTER TABLE`을 직접 실행하거나 `docker compose down -v && up -d`로 재기동한다.
 
-`EnrollmentService`에 재시도 전용 메서드를 분리한다. 재시도는 **새 트랜잭션마다 다시 시도**해야 하므로, 실제 신청 로직(`@Transactional`)과 재시도 루프(트랜잭션 없음)를 서로 다른 메서드로 나눈다.
+재시도는 **새 트랜잭션마다 다시 시도**해야 한다. Spring의 `@Transactional`은 프록시 기반으로 동작하는데, 같은 클래스 안에서 `this.doEnroll(...)`처럼 자기 자신을 호출하면 프록시를 거치지 않고 원본 객체로 직행해 `@Transactional`이 통째로 무시된다(self-invocation 문제). "검증하다 문제 있으면 분리"가 아니라, 이 문제를 피하려면 **처음부터** 재시도 루프와 실제 트랜잭션 로직을 별도 클래스로 나눠야 한다.
+
+이 둘의 관계는 Facade 패턴이다. `EnrollmentController`와 `EnrollmentConcurrencyTest`는 `EnrollmentOptimisticService`의 존재나 "재시도가 몇 번 일어나는지"를 몰라도 되고, `EnrollmentOptimisticFacade.enroll(studyId, memberId)`라는 단일 창구만 호출한다. `EnrollmentOptimisticFacade`는 재시도라는 부가 관심사를 감싸는 파사드이고, `EnrollmentOptimisticService`가 트랜잭션 하나짜리 실제 작업(신청 저장)을 맡는다. 이 분리가 self-invocation 문제를 피하는 방법이면서 동시에, "재시도 정책"과 "신청 로직"이라는 서로 다른 책임을 구조적으로도 나누는 결과가 된다. `enroll()`에서 `service.doEnroll(...)`을 호출할 때 `service`가 스프링이 주입한 진짜 프록시 객체이므로 `@Transactional`이 정상 작동한다.
 
 ```java
 package co.dingcodingco.studypass.enrollment;
@@ -314,21 +429,23 @@ import co.dingcodingco.studypass.member.MemberRepository;
 import co.dingcodingco.studypass.study.Study;
 import co.dingcodingco.studypass.study.StudyRepository;
 import java.time.LocalDateTime;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 4주차 미션: EnrollmentOptimisticFacade(재시도 루프)가 매 시도마다 호출하는
+ * 실제 신청 트랜잭션이다. @Transactional이 붙은 이 메서드는 반드시 별도 빈을 거쳐
+ * 프록시로 호출되어야 하므로, 재시도 루프와 같은 클래스에 두지 않는다(self-invocation 문제).
+ */
 @Service
-public class EnrollmentService {
-
-    private static final int MAX_RETRY = 5;
+public class EnrollmentOptimisticService {
 
     private final StudyRepository studyRepository;
     private final MemberRepository memberRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final MemberEnrollmentStatsRepository memberEnrollmentStatsRepository;
 
-    public EnrollmentService(
+    public EnrollmentOptimisticService(
             StudyRepository studyRepository,
             MemberRepository memberRepository,
             EnrollmentRepository enrollmentRepository,
@@ -339,25 +456,8 @@ public class EnrollmentService {
         this.memberEnrollmentStatsRepository = memberEnrollmentStatsRepository;
     }
 
-    /**
-     * 4주차 미션: @Version 충돌 시 새 트랜잭션으로 재시도한다.
-     * 트랜잭션이 없는 이 메서드가 재시도 루프를 돌고, 매 시도마다 doEnroll()이 새 트랜잭션을 연다.
-     */
-    public Long enroll(Long studyId, Long memberId) {
-        for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
-            try {
-                return doEnroll(studyId, memberId);
-            } catch (ObjectOptimisticLockingFailureException e) {
-                if (attempt == MAX_RETRY) {
-                    throw e;
-                }
-            }
-        }
-        throw new IllegalStateException("도달할 수 없는 경로");
-    }
-
     @Transactional
-    Long doEnroll(Long studyId, Long memberId) {
+    public Long doEnroll(Long studyId, Long memberId) {
         Study study = studyRepository.findById(studyId)
                 .orElseThrow(() -> new IllegalArgumentException("스터디를 찾을 수 없습니다: " + studyId));
         Member member = memberRepository.findById(memberId)
@@ -379,7 +479,62 @@ public class EnrollmentService {
 }
 ```
 
-`enroll()`과 `doEnroll()`이 같은 클래스 안에 있으면 스프링 프록시가 `doEnroll()`의 `@Transactional`을 가로채지 못해 실제로 새 트랜잭션이 열리지 않는다(self-invocation 문제). 검증 단계에서 로그로 커밋 시점을 확인하거나, 문제가 있으면 `doEnroll()`을 별도 `@Service`(예: `EnrollmentWriter`)로 분리한다.
+```java
+package co.dingcodingco.studypass.enrollment;
+
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.stereotype.Service;
+
+/**
+ * 4주차 미션: 비관적 락(EnrollmentService)과 같은 조건으로 비교하기 위한 낙관적 락 구현이다.
+ * EnrollmentController의 /studies/{studyId}/optimistic 비교 전용 엔드포인트에서만 호출된다.
+ * 실제 운영 경로(/studies/{studyId})는 EnrollmentService(비관적 락)를 그대로 쓴다.
+ *
+ * 이 클래스에는 @Transactional을 두지 않는다 — 매 재시도마다 EnrollmentOptimisticService의
+ * 프록시를 거쳐 새 트랜잭션을 열어야 하기 때문이다(self-invocation 문제 회피).
+ */
+@Service
+public class EnrollmentOptimisticFacade {
+
+    private static final int MAX_RETRY = 5;
+
+    private final EnrollmentOptimisticService service;
+
+    public EnrollmentOptimisticFacade(EnrollmentOptimisticService service) {
+        this.service = service;
+    }
+
+    public Long enroll(Long studyId, Long memberId) {
+        for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
+            try {
+                return service.doEnroll(studyId, memberId);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                if (attempt == MAX_RETRY) {
+                    throw e;
+                }
+            }
+        }
+        throw new IllegalStateException("도달할 수 없는 경로");
+    }
+}
+```
+
+`EnrollmentController`에 `EnrollmentOptimisticFacade`를 주입받아 호출하는 비교 전용 엔드포인트를 추가한다(위 "권장 순서" 3번 코드와 동일). `EnrollmentOptimisticService`는 컨트롤러가 직접 부르지 않고 `EnrollmentOptimisticFacade`를 통해서만 호출된다.
+
+```java
+private final EnrollmentOptimisticFacade enrollmentOptimisticFacade;
+
+// 생성자에 파라미터·대입 추가
+
+@PostMapping("/studies/{studyId}/optimistic")
+public Map<String, Object> enrollOptimistic(
+        @PathVariable Long studyId, @RequestParam Long memberId) {
+    Long id = enrollmentOptimisticFacade.enroll(studyId, memberId);
+    return Map.of("enrollmentId", id);
+}
+```
+
+필수 항목만 하고 낙관적 락 하나만 최종 채택하는 경우에도, 파사드(재시도 루프)와 트랜잭션 로직 분리 구조 자체는 유지해야 한다 — self-invocation 문제는 클래스를 하나만 쓰든 비교 구조로 가든 똑같이 발생하기 때문이다. 다만 이 경우 두 클래스명을 각각 `EnrollmentFacade`/`EnrollmentService`로 바꿔 기존 `EnrollmentService.java`를 대체하고, 비교 전용 엔드포인트(`/optimistic`)는 만들지 않는다.
 
 ### 선택 근거 기록 방법
 
@@ -399,6 +554,8 @@ public class EnrollmentService {
 - [ ] 락 보유 구간을 줄일 수 있는지 점검하고 실제로 옮겼다면 그 근거 기록
 
 ## 6단계: 개선 후 재현 테스트로 검증
+
+4단계에서 `enroll()`을 이미 락 버전으로 교체했으므로, 이 시점부터 `concurrentEnrollCanExceedCapacityBeforeFix()`를 다시 돌려도 "개선 전" 결과가 아니라 "락이 걸린 상태"의 결과가 나온다. 그래서 개선 전 수치는 4단계 교체 직전에 이미 따로 기록해뒀어야 한다(못했다면 `git stash`로 4단계 변경을 잠시 되돌리고 재현 테스트를 다시 돌려 기록한 뒤 `git stash pop`으로 복원한다).
 
 2단계의 `concurrentEnrollCanExceedCapacityBeforeFix()`를 그대로 복사해 이름과 검증 방식만 바꾼 테스트를 같은 파일에 추가한다. **capacity, 스레드 수, 동시 출발 방식은 그대로 두고** `assert`로 불변식을 강제하는 점만 다르다.
 
