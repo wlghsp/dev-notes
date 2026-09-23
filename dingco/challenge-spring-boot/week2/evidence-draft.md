@@ -31,20 +31,30 @@ Tests run: 25, Failures: 0 — BUILD SUCCESS
 
 ## 근거형 질문
 
-1. `NoUniqueBeanDefinitionException`은 언제 던져지는가?
-- 컨텍스트 초기화 중(생성자 주입 대상 빈을 만드는 시점)에 던져진다. 최상위 예외는 `UnsatisfiedDependencyException`이고 이 예외가 root cause로 감싸진다 — 두 겹으로 포장되는 것 자체가 컨테이너 관점 실패와 실제 원인이 별개 레이어에서 감지된다는 증거다.
+1. 스프링이 주입할 구현체를 결정할 수 없을 때 어떤 일이 발생하며 어떻게 해결했나요?
+- 최초 판단: 후보가 여럿이면 컨테이너가 뜨는 시점에 실패할 것이라 예상했다.
+- 근거: `TodoRepositoryAmbiguityTest`에서 `TodoRepository` 구현체 2개를 등록하고 컨텍스트를 띄워 재현했다.
+- 검증 후 답변: `NoUniqueBeanDefinitionException`(root cause, 최상위는 `UnsatisfiedDependencyException`)이 발생했다. `JdbcTodoRepository`에 `@Primary`를 붙여 해결했다.
 
-2. `@PostConstruct`는 어느 시점에 호출되며 직접 `new`는 왜 호출 안 되는가?
-- 의존성 주입이 끝난 직후 호출된다. 직접 `new`는 이 콜백 실행 단계 자체를 컨테이너가 관리하지 않으므로 호출되지 않는다.
+2. 생성자 주입이 필드 주입보다 테스트와 불변성에 유리한 이유는 무엇인가요?
+- 최초 판단: 생성자 주입이면 컨테이너 없이도 원하는 구현체를 직접 넣어 테스트할 수 있을 거라 판단했다.
+- 근거: `TodoServiceAopTest`에서 `new TodoService(new InMemoryTodoRepository())`로 직접 인스턴스를 만들어 테스트했다.
+- 검증 후 답변: 실제로 가능했다. 필드도 `final`로 선언돼 있어 생성 이후 값이 바뀌지 않는다는 게 보장된다 — 필드 주입은 이 둘 다 불가능하다.
 
-3. `@PreDestroy`는 `@PostConstruct`와 검증 방식이 왜 다른가?
-- `@SpringBootTest` 컨텍스트는 테스트 중 닫히지 않아 관찰 시점이 없다. `AnnotationConfigApplicationContext`를 직접 열고 닫아야 `close()` 시점의 콜백을 확인할 수 있다.
+3. 컨테이너가 관리하는 객체와 직접 생성한 객체의 가장 중요한 차이는 무엇인가요?
+- 최초 판단: 생명주기 콜백(`@PostConstruct`, `@PreDestroy`) 실행 여부가 가장 뚜렷한 차이일 것이라 판단했다.
+- 근거: `TodoServiceLifecycleTest`, `TodoServiceDestroyLifecycleTest`에서 컨테이너 빈과 직접 `new`한 객체의 `isInitialized()`/`isDestroyed()`를 비교했다.
+- 검증 후 답변: 컨테이너 빈은 둘 다 true, 직접 `new`한 객체는 둘 다 false로 확인됐다.
 
-4. 프록시를 거치지 않은 호출에서 advice가 안 걸리는 것을 어떻게 증명했는가?
-- `isAopProxy` 확인만으로는 부족하다. 컨테이너 빈(프록시 경유)과 직접 생성 객체(프록시 미경유)를 같은 메서드로 호출해 카운터 증분 여부를 대비시켜야 "프록시 경유 시에만" advice가 동작함이 증명된다.
+4. 프록시 객체인지 원본 객체인지 코드로 어떻게 확인할 수 있나요?
+- 최초 판단: `AopUtils`로 정적 확인이 가능할 거라 판단했다.
+- 근거: `TodoServiceAopTest`에서 `AopUtils.isAopProxy(bean)`, `AopUtils.getTargetClass(bean)`을 확인하고, 프록시/직접 생성 객체 각각 `findById` 호출 후 `CallCounter` 증가 여부도 비교했다.
+- 검증 후 답변: `isAopProxy`가 true, `getTargetClass`가 원본 클래스를 반환했다. 실행 결과 대비(카운터 증가 여부)까지 더해야 "실제로 advice가 동작하는지"까지 확인된다.
 
-5. 가장 먼저 깨질 가능성이 높은 부분은?
-- self-invocation(`this.findById(...)` 내부 호출) 시 프록시를 우회해 advice가 조용히 빠진다. 지금은 그런 호출이 없어 드러나지 않지만 막는 테스트는 아직 없다.
+5. 이번 실험의 호출 순서 로그가 없었다면 어떤 설명을 검증할 수 없었나요?
+- 최초 판단: 호출 횟수만으로는 advice가 대상 메서드를 앞뒤로 "감싸는" 구조인지까지는 못 볼 것이라 판단했다.
+- 근거: `CallCounter`는 횟수만 세고, Week 1 `ProbeEvents`처럼 문자열 순서를 기록하지 않는다.
+- 검증 후 답변: `@Around`의 before/after 동작(advice가 대상 메서드를 감싸는 구조)은 순서 로그 없이는 검증할 수 없다 — 이번 구현은 횟수만 확인했다.
 
 ## 리뷰 반영
 
