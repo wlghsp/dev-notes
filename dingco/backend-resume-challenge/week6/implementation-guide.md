@@ -1,6 +1,6 @@
 # 6주차 구현 가이드
 
-`missions/README.md` Week 6 요구사항과 `studypass`(`/Users/jihochoi/Documents/dingco/challenge-backend-resume-2026-08-wlghsp-r17`) 현재 코드를 근거로 "무엇을 어떤 순서로 구현할지"만 정리한다. 실제 코드는 지호님이 직접 작성한다. 실행 결과·수치·판단 근거는 실제로 실행한 뒤 evidence와 prep-questions에 채운다.
+`missions/README.md` Week 6 요구사항과 `studypass`(`/Users/jihochoi/Documents/study/dingco/challenge-backend-resume-2026-08-wlghsp-r17`) 현재 코드를 근거로 "무엇을 어떤 순서로 구현할지"만 정리한다. 실제 코드는 지호님이 직접 작성한다. 실행 결과·수치·판단 근거는 실제로 실행한 뒤 evidence와 prep-questions에 채운다.
 
 `week6/prep-questions.md`의 답이 아직 비어 있다. 그래서 아래 "결정 사항"은 지호님이 판단을 Claude에게 위임해 정한 값이다. prep-questions에 답하면서 바꾸고 싶은 게 생기면 바꾸고, 바꾼 이유를 evidence에 남긴다. 위임했더라도 근거형 질문 답변은 지호님 말로 설명할 수 있어야 하므로, 각 결정의 이유를 prep-questions에서 한 번씩 직접 풀어 써 본다.
 
@@ -62,6 +62,221 @@ DB 조회 수는 두 가지로 센다.
 호출당 DB 조회 수:
 ```
 
+붙여넣기 — curl 출력, SQL 로그(호출 구간)
+
+```
+jihochoi@Jiho-MacBook-Pro challenge-backend-resume-2026-08-wlghsp-r17 % for i in 1 2 3 4 5 6; do
+  curl -s -o /dev/null -w "call=$i status=%{http_code} time=%{time_total}s\n" \
+    "http://localhost:8080/api/studies/popular"
+done
+call=1 status=200 time=0.119827s
+call=2 status=200 time=0.008247s
+call=3 status=200 time=0.005185s
+call=4 status=200 time=0.005316s
+call=5 status=200 time=0.007352s
+call=6 status=200 time=0.009569s
+
+
+let        : Initializing Servlet 'dispatcherServlet'
+2026-10-06T13:16:17.988+09:00  INFO 61296 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-10-06T13:16:33.540+09:00 DEBUG 61296 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T13:16:33.545+09:00 TRACE 61296 --- [nio-8080-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T13:16:33.546+09:00 TRACE 61296 --- [nio-8080-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+2026-10-06T13:16:33.560+09:00  INFO 61296 --- [nio-8080-exec-5] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2447375 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    4087125 nanoseconds spent preparing 1 JDBC statements;
+    2099000 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 pre-partial-flushes;
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2026-10-06T13:16:33.594+09:00 DEBUG 61296 --- [nio-8080-exec-7] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T13:16:33.595+09:00 TRACE 61296 --- [nio-8080-exec-7] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T13:16:33.595+09:00 TRACE 61296 --- [nio-8080-exec-7] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+2026-10-06T13:16:33.598+09:00  INFO 61296 --- [nio-8080-exec-7] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    24167 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    124375 nanoseconds spent preparing 1 JDBC statements;
+    1627666 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 pre-partial-flushes;
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2026-10-06T13:16:33.611+09:00 DEBUG 61296 --- [nio-8080-exec-9] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T13:16:33.611+09:00 TRACE 61296 --- [nio-8080-exec-9] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T13:16:33.611+09:00 TRACE 61296 --- [nio-8080-exec-9] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+2026-10-06T13:16:33.614+09:00  INFO 61296 --- [nio-8080-exec-9] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    20958 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    113625 nanoseconds spent preparing 1 JDBC statements;
+    1429500 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 pre-partial-flushes;
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2026-10-06T13:16:33.626+09:00 DEBUG 61296 --- [nio-8080-exec-1] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T13:16:33.626+09:00 TRACE 61296 --- [nio-8080-exec-1] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T13:16:33.626+09:00 TRACE 61296 --- [nio-8080-exec-1] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+2026-10-06T13:16:33.628+09:00  INFO 61296 --- [nio-8080-exec-1] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    23209 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    123792 nanoseconds spent preparing 1 JDBC statements;
+    1563750 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 pre-partial-flushes;
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2026-10-06T13:16:33.643+09:00 DEBUG 61296 --- [nio-8080-exec-3] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T13:16:33.643+09:00 TRACE 61296 --- [nio-8080-exec-3] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T13:16:33.643+09:00 TRACE 61296 --- [nio-8080-exec-3] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+2026-10-06T13:16:33.646+09:00  INFO 61296 --- [nio-8080-exec-3] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    38709 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    224208 nanoseconds spent preparing 1 JDBC statements;
+    2416459 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 pre-partial-flushes;
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2026-10-06T13:16:33.661+09:00 DEBUG 61296 --- [nio-8080-exec-5] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+
+```
+
 ## 3단계: 캐싱 방식과 키 설계
 
 미션 1번(필수)이다. prep-questions 1번의 `RedisTemplate` vs `@Cacheable` 판단에 대한 제안은 `@Cacheable`이다.
@@ -107,6 +322,91 @@ spring:
 - [ ] `application.yml`에 `cache-names`, `enable-statistics`
 - [ ] 컨트롤러 응답 형식 변경 없음 확인
 
+### 실행 기록 (evidence용 — 여기에 채움)
+
+```
+기동 후 /actuator/prometheus에 cache_gets_total이 떴는가: 예 (호출 2번 후 hit=1, miss=1, pending=0). 첫 시도에서는 안 떴음(시행착오 1)
+enable-statistics 동작 여부: 동작함. customizer 없이 yml의 cache-names 선언과 enable-statistics: true만으로 노출됨
+redis-cli GET popularStudies::top10-open 값: JSON 배열로 보임, @class 없음. TTL 60
+시행착오:
+1. CacheConfig에 @EnableCaching이 없고 클래스에 @Configuration 대신 @Service가 붙어 있어 캐시가 동작하지 않았다.
+   증상: 호출은 200인데 redis-cli KEYS가 빈 배열, GET이 nil, TTL이 -2, grep cache_gets 출력이 없었다.
+   조치: @Configuration + @EnableCaching으로 수정 후 재기동.
+2. 값 직렬화는 GenericJackson2JsonRedisSerializer 대신 Jackson2JsonRedisSerializer에 List<PopularStudyResponse> 타입(JavaType)을 지정했다.
+   이유: record DTO와 공유 직렬화기의 타입 정보 처리가 불확실했다. 캐시가 popularStudies 하나뿐이라 가능한 선택이다.
+```
+
+붙여넣기 — 첫 시도 (캐시 미동작): FLUSHDB 후 호출 2번, grep cache_gets 출력 없음, 키 없음
+
+```
+% docker compose exec redis redis-cli FLUSHDB
+OK
+call=1 status=200
+call=2 status=200
+
+% curl -s localhost:8080/actuator/prometheus | grep cache_gets
+(출력 없음)
+
+% docker compose exec redis redis-cli KEYS '*'
+(empty array)
+% docker compose exec redis redis-cli GET popularStudies::top10-open
+(nil)
+% docker compose exec redis redis-cli TTL popularStudies::top10-open
+(integer) -2
+```
+
+붙여넣기 — 수정 후 (캐시 동작): FLUSHDB 후 호출 2번, redis-cli, grep cache_gets
+
+```
+% docker compose exec redis redis-cli FLUSHDB
+OK
+call=1 status=200
+call=2 status=200
+
+% docker compose exec redis redis-cli KEYS '*'
+1) "popularStudies::top10-open"
+
+% docker compose exec redis redis-cli GET popularStudies::top10-open
+"[{\"id\":94,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 94\xea\xb8\xb0\",\"category\":\"MOBILE\",\"fee\":80000,\"capacity\":14,\"enrolledCount\":260},{\"id\":235,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 235\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":85000,\"capacity\":20,\"enrolledCount\":258},{\"id\":69,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 69\xea\xb8\xb0\",\"category\":\"MOBILE\",\"fee\":55000,\"capacity\":19,\"enrolledCount\":257},{\"id\":175,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 175\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":85000,\"capacity\":20,\"enrolledCount\":253},{\"id\":70,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 70\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":60000,\"capacity\":20,\"enrolledCount\":253},{\"id\":180,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 180\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":10000,\"capacity\":10,\"enrolledCount\":252},{\"id\":119,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 119\xea\xb8\xb0\",\"category\":\"MOBILE\",\"fee\":105000,\"capacity\":24,\"enrolledCount\":252},{\"id\":207,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 207\xea\xb8\xb0\",\"category\":\"DATA\",\"fee\":45000,\"capacity\":22,\"enrolledCount\":250},{\"id\":52,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 52\xea\xb8\xb0\",\"category\":\"DATA\",\"fee\":70000,\"capacity\":17,\"enrolledCount\":250},{\"id\":102,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 102\xea\xb8\xb0\",\"category\":\"DATA\",\"fee\":20000,\"capacity\":22,\"enrolledCount\":249}]"
+
+% docker compose exec redis redis-cli TTL popularStudies::top10-open
+(integer) 60
+
+% curl -s localhost:8080/actuator/prometheus | grep cache_gets
+# HELP cache_gets_total The number of pending requests
+# TYPE cache_gets_total counter
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="hit"} 1.0
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="miss"} 1.0
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="pending"} 0.0
+```
+
+붙여넣기 — 수정 후 서버 SQL 로그 (호출 2번 구간에서 `from study` select는 1건만 찍힘, 지호님이 서버 콘솔에서 직접 확인. 호출 2번째는 select 없음)
+
+```
+2026-10-06T16:08:21.001+09:00 DEBUG 29759 --- [nio-8080-exec-4] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T16:08:21.006+09:00 TRACE 29759 --- [nio-8080-exec-4] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T16:08:21.006+09:00 TRACE 29759 --- [nio-8080-exec-4] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+```
+
 ## 4단계: 캐시 적용 후 재측정과 히트·미스 관측
 
 2단계와 같은 조건(같은 URL, 워밍업 후 5회)으로 다시 잰다. 이번에는 **캐시를 먼저 비우고** 시작해 첫 호출이 미스인지 확인한다.
@@ -150,11 +450,118 @@ sequenceDiagram
 ### 측정 기록 (evidence용 — 여기에 채움)
 
 ```
-조건: 2단계와 동일 (캐시 FLUSH 후 시작)
-응답 시간: 미스 1회 / 히트 5회
-호출당 DB 조회 수: 미스 1건 / 히트 0건
-cache_gets: hit=, miss=
-개선 전/후 비교:
+조건: 2단계와 동일 (캐시 FLUSH 후 시작). 같은 조건으로 2회 측정했다.
+  - 1차: curl 응답 시간 + cache_gets
+  - 2차: curl 응답 시간 + SQL 로그 + redis-cli MONITOR + TTL
+응답 시간 (미스 1회 / 히트 5회):
+  - 1차: 18.7ms / 2.4~4.7ms (히트 평균 약 3.16ms)
+  - 2차: 22.2ms / 2.2~4.4ms (히트 평균 약 3.35ms)
+호출당 DB 조회 수: 미스 1건 / 히트 0건 (2차 SQL 로그에서 6호출 구간에 from study select가 1건만 찍힘)
+Redis 동작 (MONITOR): 미스 호출에서 GET 뒤에 SET(PX 60000), 이후 히트 5호출은 GET만 5번, SET 없음. 호출 직후 TTL 60
+cache_gets: 1차 직후 누적 hit=6, miss=2 (앱 재기동 없이 3단계 hit 1·miss 1 + 4단계 1차 hit 5·miss 1이 합산된 값. 1차 6호출분은 미스 1, 히트 5로 일치). 2차 직후 값은 따로 재지 않았다.
+개선 전/후 비교: 워밍업 제외 5회 평균 약 7.13ms(2단계) → 히트 5회 평균 약 3.2~3.3ms. 약 53~56% 감소(약 2.1~2.3배).
+  - 미스 호출은 18.7~22.2ms로 2단계 평균(7.13ms)보다 느리다. Redis GET + DB 조회 + SET을 모두 거치기 때문이다.
+  - 예상(4~6ms)보다 히트가 빨랐다. 2단계 로그의 DB 실행 시간이 호출당 약 1.4~2.4ms였고, 히트 시 이 비용이 사라지면서 Redis 왕복 비용은 예상보다 작았다.
+  - 한계: 각 5회씩 2회 측정이고 로컬 단일 Redis다. 2단계 call=1(119.8ms)은 JVM 워밍업이 섞여 있어 미스 호출과 직접 비교하지 않는다.
+```
+
+붙여넣기 — curl 출력 (1차)
+
+```
+% docker compose exec redis redis-cli FLUSHDB
+OK
+% for i in 1 2 3 4 5 6; do
+  curl -s -o /dev/null -w "call=$i status=%{http_code} time=%{time_total}s\n" \
+    "http://localhost:8080/api/studies/popular"
+done
+call=1 status=200 time=0.018698s
+call=2 status=200 time=0.004730s
+call=3 status=200 time=0.002907s
+call=4 status=200 time=0.002746s
+call=5 status=200 time=0.002405s
+call=6 status=200 time=0.002991s
+```
+
+붙여넣기 — curl 출력과 TTL (2차)
+
+```
+% docker compose exec redis redis-cli FLUSHDB
+OK
+call=1 status=200 time=0.022179s
+call=2 status=200 time=0.003609s
+call=3 status=200 time=0.004145s
+call=4 status=200 time=0.004447s
+call=5 status=200 time=0.002351s
+call=6 status=200 time=0.002184s
+% docker compose exec redis redis-cli TTL popularStudies::top10-open
+(integer) 60
+```
+
+붙여넣기 — SQL 로그 (2차 6호출 구간. from study select는 호출 1(미스) 한 번만 찍히고 호출 2~6에는 없음. 콘솔의 Gradle 진행 표시줄이 섞여 겹친 줄은 제외하고 select 1건만 옮겼다)
+
+```
+2026-10-06T16:16:29.818+09:00 DEBUG 29759 --- [io-8080-exec-10] org.hibernate.SQL                        : 
+    select
+        s1_0.id,
+        s1_0.capacity,
+        s1_0.category,
+        s1_0.created_at,
+        s1_0.enrolled_count,
+        s1_0.fee,
+        s1_0.opened_at,
+        s1_0.status,
+        s1_0.title,
+        s1_0.version 
+    from
+        study s1_0 
+    where
+        s1_0.status=? 
+    order by
+        s1_0.enrolled_count desc 
+    limit
+        ?
+2026-10-06T16:16:29.820+09:00 TRACE 29759 --- [io-8080-exec-10] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [OPEN]
+2026-10-06T16:16:29.820+09:00 TRACE 29759 --- [io-8080-exec-10] org.hibernate.orm.jdbc.bind              : binding parameter (2:INTEGER) <- [10]
+2026-10-06T16:16:29.826+09:00  INFO 29759 --- [io-8080-exec-10] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    1351000 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    1754333 nanoseconds spent preparing 1 JDBC statements;
+    2820375 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 pre-partial-flushes;
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+```
+
+붙여넣기 — redis-cli MONITOR 출력 (2차 6호출. 호출 1: GET 뒤 SET, 호출 2~6: GET만)
+
+```
+1791270989.855287 [0 127.0.0.1:49992] "FLUSHDB"
+1791270989.874806 [0 172.24.0.1:35278] "GET" "popularStudies::top10-open"
+1791270989.888609 [0 172.24.0.1:35278] "SET" "popularStudies::top10-open" "[{\"id\":94,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 94\xea\xb8\xb0\",\"category\":\"MOBILE\",\"fee\":80000,\"capacity\":14,\"enrolledCount\":260},{\"id\":235,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 235\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":85000,\"capacity\":20,\"enrolledCount\":258},{\"id\":69,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 69\xea\xb8\xb0\",\"category\":\"MOBILE\",\"fee\":55000,\"capacity\":19,\"enrolledCount\":257},{\"id\":175,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 175\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":85000,\"capacity\":20,\"enrolledCount\":253},{\"id\":70,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 70\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":60000,\"capacity\":20,\"enrolledCount\":253},{\"id\":180,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 180\xea\xb8\xb0\",\"category\":\"BACKEND\",\"fee\":10000,\"capacity\":10,\"enrolledCount\":252},{\"id\":119,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 119\xea\xb8\xb0\",\"category\":\"MOBILE\",\"fee\":105000,\"capacity\":24,\"enrolledCount\":252},{\"id\":207,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 207\xea\xb8\xb0\",\"category\":\"DATA\",\"fee\":45000,\"capacity\":22,\"enrolledCount\":250},{\"id\":52,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 52\xea\xb8\xb0\",\"category\":\"DATA\",\"fee\":70000,\"capacity\":17,\"enrolledCount\":250},{\"id\":102,\"title\":\"\xec\x8a\xa4\xed\x84\xb0\xeb\x94\x94 102\xea\xb8\xb0\",\"category\":\"DATA\",\"fee\":20000,\"capacity\":22,\"enrolledCount\":249}]" "PX" "60000"
+1791270989.905392 [0 172.24.0.1:35278] "GET" "popularStudies::top10-open"
+1791270989.920005 [0 172.24.0.1:35278] "GET" "popularStudies::top10-open"
+1791270989.935035 [0 172.24.0.1:35278] "GET" "popularStudies::top10-open"
+1791270989.949935 [0 172.24.0.1:35278] "GET" "popularStudies::top10-open"
+1791270989.960980 [0 172.24.0.1:35278] "GET" "popularStudies::top10-open"
+1791270990.049330 [0 127.0.0.1:50002] "TTL" "popularStudies::top10-open"
+```
+
+참고: MONITOR의 시각(Redis, Colima VM)과 앱 SQL 로그의 시각(호스트)은 서로 다른 시계라 수십 ms 어긋나 있다(SQL 로그 16:16:29.818이 MONITOR의 GET 시각보다 이르다). 호출 순서(GET → select → SET)는 같은 호출에서 일어난 것으로 본다. 시계 차이의 원인은 확인하지 않았다.
+
+붙여넣기 — grep cache_gets 출력 (4단계 6호출 직후, 누적값)
+
+```
+% curl -s localhost:8080/actuator/prometheus | grep cache_gets
+# HELP cache_gets_total The number of pending requests
+# TYPE cache_gets_total counter
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="hit"} 6.0
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="miss"} 2.0
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="pending"} 0.0
 ```
 
 ## 5단계: TTL과 무효화 전략
@@ -181,6 +588,109 @@ cache_gets: hit=, miss=
 - [ ] `enroll()`에서 이벤트 발행, `AFTER_COMMIT` 리스너에서 `top10-open` 키 evict
 - [ ] 로컬 확인: popular 호출(캐시 생성) → 신청 1건 → `redis-cli GET`으로 키가 사라졌는지, 다음 popular 호출이 미스인지
 - [ ] `redis-cli TTL`로 TTL 60초가 실제로 걸려 있는지 확인
+
+### 실행 기록 (evidence용 — 여기에 채움)
+
+```
+popular 호출 직후 redis-cli TTL: 60 (EXISTS 1)
+신청 1건 후 redis-cli GET (키가 사라졌는가): 사라짐 (EXISTS 1 → 0). 신청 응답 enrollmentId=200001
+신청 후 다음 popular 호출이 미스였는가 (SQL 로그 / cache_gets miss 증가): 미스로 판단.
+  - 근거: 호출 후 EXISTS 1, TTL 60으로 키가 다시 채워짐(채워지는 것은 미스일 때뿐).
+  - cache_gets: 재기동 이후 hit=0, miss=4. 재기동 후 popular를 4번 호출했고 매번 FLUSHDB 또는 무효화 직후라 전부 미스로 계산이 맞는다. 이 호출 직전의 miss 값은 따로 재지 않았다.
+  - SQL 로그: 신청(16:36:27) 30초 뒤 popular 호출(16:36:57)에서 `from study` select가 다시 찍힘. 신청이 없었다면 TTL 60초 안(캐시가 채워진 16:36:27 기준)이라 히트로 select가 없었을 시점이므로, 이 select가 무효화가 동작했다는 증거다. 재기동 이후 `from study` select 4건이 cache_gets miss=4와 일치한다.
+롤백 케이스 확인 여부: 로컬 수동 확인은 하지 않음. 7단계 테스트(rolledBackEnrollDoesNotEvictCache)로 확인 예정
+시행착오:
+  1. 시드 스터디는 전부 정원 초과(enrolled_count >= capacity)라, 정원 여유 있는 스터디 조회 결과가 0건이었다. 그대로는 신청이 정원 마감으로 실패한다. 신청 테스트용 스터디를 INSERT했다(id 301, capacity 5).
+  2. 신청 대상 스터디는 인기 TOP10에 들지 않아 순위가 바뀌지 않는데도 캐시는 지워졌다. enroll()이 순위 변화 여부와 무관하게 무조건 무효화한다는 뜻이고, 신청이 몰리면 캐시 효과가 줄어드는 한계의 근거다.
+```
+
+붙여넣기 — 신청 가능한 스터디 조회(결과 없음), 테스트용 스터디 INSERT, 회원 조회
+
+```
+% docker compose exec db mysql -ustudypass -pstudypass1234 studypass -e \
+  "select id, capacity, enrolled_count from study where status='OPEN' and enrolled_count < capacity limit 3;"
+(결과 없음: 정원에 여유 있는 OPEN 스터디가 0건)
+
+% docker compose exec db mysql -ustudypass -pstudypass1234 studypass -e \
+  "insert into study (title, category, fee, capacity, enrolled_count, status, opened_at, created_at, version) \
+   values ('cache-evict-check', 'BACKEND', 10000, 5, 0, 'OPEN', now(6), now(6), 0); \
+   select last_insert_id() as study_id;"
++----------+
+| study_id |
++----------+
+|      301 |
++----------+
+
+% docker compose exec db mysql -ustudypass -pstudypass1234 studypass -e "select id from member limit 1;"
++----+
+| id |
++----+
+|  1 |
++----+
+```
+
+붙여넣기 — 캐시 채움 → 신청 → 무효화 확인
+
+```
+% docker compose exec redis redis-cli FLUSHDB
+OK
+popular status=200
+% docker compose exec redis redis-cli EXISTS popularStudies::top10-open
+(integer) 1
+
+% curl -s -X POST "http://localhost:8080/api/enrollments/studies/301?memberId=1"
+{"enrollmentId":200001}
+
+% docker compose exec redis redis-cli EXISTS popularStudies::top10-open
+(integer) 0
+```
+
+붙여넣기 — 신청 후 다음 popular 호출 (미스 확인), TTL, cache_gets
+
+```
+% curl -s -o /dev/null -w "popular status=%{http_code}\n" http://localhost:8080/api/studies/popular
+popular status=200
+% docker compose exec redis redis-cli EXISTS popularStudies::top10-open
+(integer) 1
+% docker compose exec redis redis-cli TTL popularStudies::top10-open
+(integer) 60
+% curl -s localhost:8080/actuator/prometheus | grep cache_gets
+# HELP cache_gets_total The number of pending requests
+# TYPE cache_gets_total counter
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="hit"} 0.0
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="miss"} 4.0
+cache_gets_total{application="studypass",cache="popularStudies",cache_manager="cacheManager",name="popularStudies",result="pending"} 0.0
+```
+
+붙여넣기 — SQL 로그 (재기동 이후 전체 흐름. 각 select 앞은 시각. TRACE 바인딩과 Session Metrics 줄은 생략하고 SQL 본문만 옮겼다)
+
+```
+16:33:59.063  from study select  (popular, 1단계 확인 중 첫 호출, FLUSHDB 직후 미스)
+16:34:06.637  from study select  (popular, 1단계 확인 반복, FLUSHDB 직후 미스)
+16:36:27.093  from study select  (popular, 신청 전 캐시 채움, 미스)
+              select member where id=?            (신청 트랜잭션 시작, memberId=1)
+              select study where id=? for update  (studyId=301)
+              insert into study_enrollment ...
+              update study set ..., enrolled_count=1 ... where id=301 and version=0
+16:36:57.452  from study select  (popular, 신청 30초 뒤. 캐시가 무효화되어 DB를 다시 조회 = 미스)
+```
+
+위에서 `from study` select의 SQL 본문은 모두 같다.
+
+```
+    select
+        s1_0.id, s1_0.capacity, s1_0.category, s1_0.created_at, s1_0.enrolled_count,
+        s1_0.fee, s1_0.opened_at, s1_0.status, s1_0.title, s1_0.version
+    from
+        study s1_0
+    where
+        s1_0.status=?
+    order by
+        s1_0.enrolled_count desc
+    limit
+        ?
+    바인딩: (1) OPEN, (2) 10
+```
 
 ## 6단계: 캐시 문제 사례 방지
 
@@ -211,6 +721,69 @@ cache_gets: hit=, miss=
 - [ ] `sync` 끈 상태에서 동시 N건 → 조회 수 기록 (방지 전)
 - [ ] `sync = true`에서 같은 조건 → 조회 수 기록 (방지 후)
 
+### 실행 기록 (evidence용 — 여기에 채움)
+
+```
+조건: 캐시 비움, 동시 N=30건(THREAD_COUNT), CountDownLatch로 동시 출발, 인메모리 폴백 캐시
+sync=false (방지 전) from study 조회 수: 30건 (동시 30건 전부가 DB 조회. 테스트 실패: expected 1L, but was 30L)
+sync=true (방지 후) from study 조회 수: 1건 (THREAD_COUNT=30, sync = true에서 cleanTest 후 재실행해 테스트 통과, BUILD SUCCESSFUL in 4s)
+sync를 true로 되돌렸는가: 예 (최종 코드에 sync = true 적용, 방지 후 테스트가 이 상태에서 통과)
+시행착오:
+  1. 방지 전 실패 출력(기본 출력)에는 기대값과 실제값이 나오지 않아 조회 수를 바로 알 수 없었다. `-i` 옵션으로 실행하고 `grep -E "expected|but was"`로 걸러 10건임을 확인했다. (AssertJ의 isEqualTo 실패 메시지는 "expected: ... but was: ..." 형식이다.)
+  2. 방지 전을 처음 잰 값이 10건이었는데, 테스트의 THREAD_COUNT를 실수로 10으로 두고 있었기 때문이었다(동시 10건이 전부 미스). 30으로 고쳐 다시 재니 30건이 나왔다. 앞선 "30건 중 10건" 해석은 틀렸고, 이 시행착오로 대체한다.
+  3. THREAD_COUNT가 바뀌었으므로 방지 후 통과를 30 기준으로 다시 확인했다. 직전에 `./gradlew test`만 다시 돌렸을 때는 `5 up-to-date`(635ms)로 테스트가 실행되지 않았다. Gradle이 입력이 같으면 테스트를 건너뛰기 때문이다. `cleanTest`를 붙여 강제로 실행해 확인했다.
+```
+
+붙여넣기 — 방지 전 조회 수 확인 (-i 실행 후 grep)
+
+```
+(THREAD_COUNT를 실수로 10으로 둔 실행, 참고용)
+% ./gradlew test --tests '*PopularStudyCacheTest.concurrentMissesHitDatabaseOnce' -i 2>&1 | grep -E "expected|but was"
+    expected: 1L
+     but was: 10L
+
+(THREAD_COUNT = 30으로 고친 실행, 방지 전 기준값)
+% ./gradlew test --tests '*PopularStudyCacheTest.concurrentMissesHitDatabaseOnce' -i 2>&1 | grep -E "expected|but was"
+    expected: 1L
+     but was: 30L
+```
+
+붙여넣기 — sync=false 테스트 실행 출력 (방지 전. 실패)
+
+```
+% ./gradlew test --tests '*PopularStudyCacheTest.concurrentMissesHitDatabaseOnce'
+...
+> Task :test
+
+PopularStudyCacheTest > 캐시가 빈 순간 동시 요청 30건이 몰려도 DB 조회는 1건이다 (sync=true) FAILED
+    org.opentest4j.AssertionFailedError at PopularStudyCacheTest.java:117
+
+1 test completed, 1 failed
+
+> Task :test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///Users/jihochoi/Documents/study/dingco/challenge-backend-resume-2026-08-wlghsp-r17/build/reports/tests/test/index.html
+
+BUILD FAILED in 4s
+5 actionable tasks: 3 executed, 2 up-to-date
+```
+
+참고: 테스트 이름에 `(sync=true)`가 고정으로 적혀 있어서, sync를 끈 이 실행에서도 이름은 그대로 나온다. 이 실행은 `sync` 없이 돌린 것이다.
+
+붙여넣기 — sync=true 테스트 실행 출력 (방지 후. 통과. THREAD_COUNT=30, cleanTest로 강제 실행)
+
+```
+% ./gradlew cleanTest test --tests '*PopularStudyCacheTest.concurrentMissesHitDatabaseOnce' -i 2>&1 | grep -E "PASSED|FAILED|BUILD|tests completed"
+
+BUILD SUCCESSFUL in 4s
+```
+
+참고: 필터(`PASSED|FAILED|...`) 때문에 `PASSED` 줄은 출력되지 않았다. 4초가 걸렸고 cleanTest를 앞에 붙였으므로 테스트가 실제로 실행된 것이다.
+
 ## 7단계: 회귀 테스트
 
 미션 3·4번의 "코드로 남긴다"를 테스트로 고정한다. 새 파일 `PopularStudyCacheTest.java`로 분리한다. `StudyControllerTest` 스타일(`@SpringBootTest(webEnvironment = RANDOM_PORT)`)을 따른다. 아래는 테스트 목록과 구조만 정리한다.
@@ -240,8 +813,46 @@ cache_gets: hit=, miss=
 
 ```
 실행 커맨드:
+  - ./gradlew cleanTest test --tests '*PopularStudyCacheTest*' -i
+  - ./gradlew cleanTest test (전체)
 결과:
-시행착오:
+  - PopularStudyCacheTest 4개 테스트가 실행되고 BUILD SUCCESSFUL (4s). 두 번째 호출 DB 미조회, 신청 후 무효화, 롤백 시 캐시 유지, 동시 미스 1건(sync).
+  - 전체 ./gradlew test도 BUILD SUCCESSFUL (5s). 기존 테스트가 깨지지 않았다.
+  - 한계: 출력 필터와 요약만 남겨서 개별 PASSED 줄과 전체 테스트 개수는 캡처하지 않았다. 통과는 BUILD SUCCESSFUL로 판단한다.
+시행착오: 없음 (6단계에서 겪은 THREAD_COUNT 실수와 up-to-date 문제는 6단계 기록 참고)
+```
+
+붙여넣기 — `./gradlew test --tests '*PopularStudyCacheTest*'` 출력 (cleanTest로 강제 실행)
+
+```
+% ./gradlew cleanTest test --tests '*PopularStudyCacheTest*' -i 2>&1 | grep -E "PopularStudyCacheTest >|BUILD|tests completed"
+
+PopularStudyCacheTest > 같은 요청을 두 번 보내면 첫 호출만 DB를 조회하고 두 번째는 캐시에서 답한다 STANDARD_OUT
+PopularStudyCacheTest > 신청 트랜잭션이 롤백되면 캐시는 지워지지 않는다. STANDARD_OUT
+PopularStudyCacheTest > 캐시가 빈 순간 동시 요청 30건이 몰려도 DB 조회는 1건이다 (sync=true) STANDARD_OUT
+PopularStudyCacheTest > 스터디 신청이 커밋되면 인기 목록 캐시가 지워지고 다음 호출은 DB를 다시 조회한다 STANDARD_OUT
+BUILD SUCCESSFUL in 4s
+```
+
+붙여넣기 — 전체 `./gradlew test` 출력 (BUILD SUCCESSFUL, 테스트 수)
+
+```
+% ./gradlew cleanTest test 2>&1 | tail -15
+
+> Task :testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2026-10-06T17:49:37.758+09:00  INFO 63363 --- [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-10-06T17:49:37.759+09:00  INFO 63363 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-10-06T17:49:37.760+09:00  INFO 63363 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-10-06T17:49:37.760+09:00  INFO 63363 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-10-06T17:49:37.764+09:00  INFO 63363 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-10-06T17:49:37.766+09:00  INFO 63363 --- [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-10-06T17:49:37.767+09:00  INFO 63363 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-10-06T17:49:37.767+09:00  INFO 63363 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+> Task :test
+
+BUILD SUCCESSFUL in 5s
+6 actionable tasks: 2 executed, 4 up-to-date
 ```
 
 ## 8단계: 이력서 압축
@@ -324,7 +935,388 @@ sync 적용으로 1번으로 줄였다.
 - [ ] 히트율·DB 조회 수 패널 구성
 - [ ] 캐시 적용/무효화 시점 캡처, 4~5단계 수치와 대조
 
+### 실행 기록 (evidence용 — 여기에 채움, 하지 않았으면 "미실시")
+
+```
+Prometheus Targets UP 여부:
+Grafana 캡처 파일 경로 (저장소 안):
+히트율 상승 / 무효화 직후 미스 확인:
+시행착오:
+```
+
 ---
+
+## 기타 메모 (어느 단계에도 안 맞는 로그·에러·관찰)
+
+```
+```
+
+---
+
+## 구현 코드 (참고용 전체)
+
+> ✏️ 지호님 요청으로 추가함. 이 가이드 위쪽의 "실제 코드는 지호님이 직접 작성한다"는 원칙의 예외다. 작성한 사람이 아니라 읽고 설명할 수 있는 사람이어야 하므로, 붙여 넣기 전에 각 코드가 왜 그렇게 생겼는지 읽고 prep-questions 답과 맞는지 확인한다.
+>
+> 이 코드는 현재 studypass 소스(`StudyController`, `EnrollmentService`, `QueryCountProbe`, 두 `application.yml`)를 읽고 썼지만, 컴파일하거나 실행해 보지 못했다. 컴파일 오류, 패키지 import, `cache_gets_total` 노출 여부는 실제로 돌려서 확인하고, 안 맞으면 "실행 기록"의 시행착오에 남긴다.
+
+경로는 `src/main/java/co/dingcodingco/studypass/` 기준이다.
+
+### 코드를 읽기 전에: 값 타입 주의
+
+> ✏️ 값 타입을 `List<Map<String, Object>>`에서 record DTO(`PopularStudyResponse`)로 바꿨다 (지호님 결정: 이번 미션에 필수는 아니지만 타입 안전성과 실무 관행 때문에 DTO로 간다). 아래 코드는 DTO 버전이다.
+
+`toSummary`의 값은 `Long`, `String`, `int`뿐이라 날짜 타입 직렬화 걱정은 해당하지 않는다. 캐시 값의 타입을 정할 때 걸리는 점은 두 가지다.
+
+1. **`Map<String, Object>`는 타입 안전성이 약하다.** 필드 이름이 문자열 키라 오타를 컴파일러가 못 잡고 값 타입도 `Object`다. 캐시에 넣는 값은 형태가 고정이므로 record DTO가 낫다. 응답 JSON의 필드 이름과 값은 그대로다.
+2. **DTO를 `GenericJackson2JsonRedisSerializer`로 직렬화하면 위험이 있다.** 이 직렬화기는 타입 정보(`@class`)를 JSON에 같이 쓰는데, 기본 설정에서는 final 클래스(record 포함)에는 타입 정보를 안 붙이는 것으로 알고 있다. 그러면 캐시 히트 때 record가 아니라 `LinkedHashMap`으로 읽혀 `ClassCastException`이 날 수 있다(확인하지는 못했다). 그래서 **값 타입을 직렬화기에 직접 알려 주는 `Jackson2JsonRedisSerializer`**를 쓴다. `@class` 정보가 필요 없어서 `redis-cli GET`으로 보이는 JSON도 깔끔하다.
+
+인메모리 폴백 테스트는 직렬화를 거치지 않아서 이 문제를 못 잡는다. 그래서 반드시 로컬 Redis에서 **두 번째 호출(캐시 히트)이 200으로 오고 `redis-cli GET`에 JSON이 보이는지**로 확인한다. `Jackson2JsonRedisSerializer`의 `(ObjectMapper, JavaType)` 생성자가 현재 버전에 있는지는 확인하지 못했으므로 컴파일해서 안 되면 에러를 시행착오에 남긴다. `list()`는 `Map`을 그대로 두므로 두 API의 반환 방식이 달라지는 점은 evidence 한계에 적는다.
+
+### 3단계 코드
+
+**캐시 설정** — `cache/CacheConfig.java` (새 파일)
+
+```java
+package co.dingcodingco.studypass.cache;
+
+import co.dingcodingco.studypass.study.PopularStudyResponse;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.util.List;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+
+@Configuration
+@EnableCaching
+public class CacheConfig {
+
+    // 테스트(Redis 없음)에서도 기동되도록 RedisConnectionFactory를 주입받지 않는다.
+    // 이 빈은 TTL과 직렬화 설정값일 뿐이고, 연결은 Redis 자동 설정이 있을 때 Boot가 만든다.
+    @Bean
+    RedisCacheConfiguration redisCacheConfiguration() {
+        // 값 타입(List<PopularStudyResponse>)을 직렬화기에 직접 알려 준다. 캐시가 popularStudies 하나뿐이라 이렇게 묶는다.
+        ObjectMapper mapper = new ObjectMapper();
+        JavaType valueType = mapper.getTypeFactory()
+                .constructCollectionType(List.class, PopularStudyResponse.class);
+
+        return RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofSeconds(60))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair
+                        .fromSerializer(new Jackson2JsonRedisSerializer<>(mapper, valueType)));
+    }
+}
+```
+
+**캐시 대상 서비스** — `study/PopularStudyService.java` (새 파일)
+
+```java
+package co.dingcodingco.studypass.study;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+@Service
+public class PopularStudyService {
+
+    public static final String CACHE_NAME = "popularStudies";
+    public static final String CACHE_KEY = "top10-open";
+
+    private final StudyRepository studyRepository;
+
+    public PopularStudyService(StudyRepository studyRepository) {
+        this.studyRepository = studyRepository;
+    }
+
+    // 키가 하나뿐이라는 사실이 코드에 보이도록 고정 문자열로 준다. (6단계에서 sync = true를 추가한다)
+    @Cacheable(cacheNames = CACHE_NAME, key = "'" + CACHE_KEY + "'")
+    public List<PopularStudyResponse> popular() {
+        return studyRepository.findTop10ByStatusOrderByEnrolledCountDesc("OPEN").stream()
+                .map(PopularStudyResponse::from)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+}
+```
+
+**`study/PopularStudyResponse.java`** (새 파일)
+
+```java
+package co.dingcodingco.studypass.study;
+
+public record PopularStudyResponse(
+        Long id, String title, String category, int fee, int capacity, int enrolledCount) {
+
+    static PopularStudyResponse from(Study study) {
+        return new PopularStudyResponse(study.getId(), study.getTitle(), study.getCategory(),
+                study.getFee(), study.getCapacity(), study.getEnrolledCount());
+    }
+}
+```
+
+`StudyController.toSummary`는 `list()`도 쓰기 때문에 건드리지 않았다. `list()`는 기존대로 `Map`을 반환하므로 두 API의 반환 타입이 달라지지만, 변경 범위를 `popular()`로 한정하는 쪽을 택했다. `Stream.toList()` 대신 `ArrayList`로 모으는 것은 JSON 역직렬화에서 불변 리스트 타입을 피하기 위해서다.
+
+**컨트롤러 수정** — `study/StudyController.java`
+
+```java
+    private final StudyRepository studyRepository;
+    private final StudyQueryService studyQueryService;
+    private final PopularStudyService popularStudyService;
+
+    public StudyController(StudyRepository studyRepository, StudyQueryService studyQueryService,
+                           PopularStudyService popularStudyService) {
+        this.studyRepository = studyRepository;
+        this.studyQueryService = studyQueryService;
+        this.popularStudyService = popularStudyService;
+    }
+
+    /** 캐싱된 인기 스터디 목록. 계산은 PopularStudyService가 한다. */
+    @GetMapping("/popular")
+    public List<PopularStudyResponse> popular() {
+        return popularStudyService.popular();
+    }
+```
+
+기존 `popular()` 본문은 위 한 줄로 바뀌고, 나머지(`list`, `comments`, `toSummary`)는 그대로 둔다.
+
+**yml** — `src/main/resources/application.yml`의 `spring:` 아래에 추가 (테스트 yml은 건드리지 않는다)
+
+```yaml
+spring:
+  cache:
+    cache-names: popularStudies
+    redis:
+      enable-statistics: true
+```
+
+### 5단계 코드
+
+**이벤트** — `study/StudyEnrolledEvent.java` (새 파일)
+
+```java
+package co.dingcodingco.studypass.study;
+
+public record StudyEnrolledEvent(Long studyId) {
+}
+```
+
+**커밋 후 무효화 리스너** — `study/PopularStudyCacheEvictor.java` (새 파일)
+
+```java
+package co.dingcodingco.studypass.study;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+@Component
+public class PopularStudyCacheEvictor {
+
+    private final CacheManager cacheManager;
+
+    public PopularStudyCacheEvictor(CacheManager cacheManager) {
+        this.cacheManager = cacheManager;
+    }
+
+    // 커밋 후에 지운다. 커밋 전에 지우면 그 사이 들어온 읽기가 옛 값을 다시 캐시에 채우고, 롤백되면 지운 게 무의미하다.
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onStudyEnrolled(StudyEnrolledEvent event) {
+        Cache cache = cacheManager.getCache(PopularStudyService.CACHE_NAME);
+        if (cache != null) {
+            cache.evict(PopularStudyService.CACHE_KEY);
+        }
+    }
+}
+```
+
+**이벤트 발행** — `enrollment/EnrollmentService.java`
+
+```java
+// import 추가
+import co.dingcodingco.studypass.study.StudyEnrolledEvent;
+import org.springframework.context.ApplicationEventPublisher;
+
+// 필드와 생성자 파라미터 추가
+private final ApplicationEventPublisher eventPublisher;
+
+public EnrollmentService(
+        StudyRepository studyRepository,
+        MemberRepository memberRepository,
+        EnrollmentRepository enrollmentRepository,
+        MemberEnrollmentStatsRepository memberEnrollmentStatsRepository,
+        ApplicationEventPublisher eventPublisher) {
+    // ... 기존 대입
+    this.eventPublisher = eventPublisher;
+}
+
+// enroll() 끝, return saved.getId() 바로 앞
+eventPublisher.publishEvent(new StudyEnrolledEvent(study.getId()));
+```
+
+`EnrollmentService`는 `@Transactional`이라 이 이벤트는 트랜잭션에 묶이고, 리스너는 커밋이 끝난 뒤에만 실행된다. 롤백되면 실행되지 않는다. `new EnrollmentService(...)`로 직접 만드는 곳은 없고(소스 확인), 모두 스프링이 주입하므로 생성자 파라미터 추가로 깨지는 곳은 없다.
+
+한계: Redis가 죽어 있으면 이 리스너의 `evict`가 예외를 낼 수 있다. 그 경우 신청 자체는 이미 커밋돼 있다. 이런 상황의 동작은 이번 범위에서 확인하지 않았고, 한계 항목에 "Redis 장애 시 무효화 실패 처리는 다루지 않았다"로 적는다.
+
+### 6단계 코드
+
+3단계의 `@Cacheable`에 `sync = true`만 추가한다. 방지 전 측정에서는 이 한 줄을 지운 상태로 4번 테스트를 돌리고, 결과를 기록한 뒤 다시 붙인다.
+
+```java
+@Cacheable(cacheNames = CACHE_NAME, key = "'" + CACHE_KEY + "'", sync = true)
+```
+
+### 7단계 코드
+
+`src/test/java/co/dingcodingco/studypass/study/PopularStudyCacheTest.java` (새 파일). 테스트는 `RedisAutoConfiguration`이 제외된 환경이라 인메모리 폴백 캐시 위에서 돈다.
+
+```java
+package co.dingcodingco.studypass.study;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import co.dingcodingco.studypass.enrollment.EnrollmentService;
+import co.dingcodingco.studypass.member.Member;
+import co.dingcodingco.studypass.member.MemberRepository;
+import co.dingcodingco.studypass.support.QueryCountProbe;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class PopularStudyCacheTest {
+
+    private static final int THREAD_COUNT = 30;
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+    @Autowired
+    private CacheManager cacheManager;
+    @Autowired
+    private QueryCountProbe queryCountProbe;
+    @Autowired
+    private PopularStudyService popularStudyService;
+    @Autowired
+    private EnrollmentService enrollmentService;
+    @Autowired
+    private StudyRepository studyRepository;
+    @Autowired
+    private MemberRepository memberRepository;
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @BeforeEach
+    void clearCache() {
+        cache().clear();
+    }
+
+    @DisplayName("같은 요청을 두 번 보내면 첫 호출만 DB를 조회하고 두 번째는 캐시에서 답한다")
+    @Test
+    void secondCallDoesNotHitDatabase() {
+        queryCountProbe.reset();
+
+        restTemplate.getForEntity("/api/studies/popular", List.class);
+        restTemplate.getForEntity("/api/studies/popular", List.class);
+
+        assertThat(cache().get(PopularStudyService.CACHE_KEY)).isNotNull();
+        assertThat(queryCountProbe.queryCount()).isLessThanOrEqualTo(1);
+    }
+
+    @DisplayName("스터디 신청이 커밋되면 인기 목록 캐시가 지워지고 다음 호출은 DB를 다시 조회한다")
+    @Test
+    void enrollEvictsCache() {
+        restTemplate.getForEntity("/api/studies/popular", List.class);
+        assertThat(cache().get(PopularStudyService.CACHE_KEY)).isNotNull();
+
+        enrollmentService.enroll(saveStudyId(), saveMemberId());
+
+        assertThat(cache().get(PopularStudyService.CACHE_KEY)).isNull();
+        queryCountProbe.reset();
+        restTemplate.getForEntity("/api/studies/popular", List.class);
+        assertThat(queryCountProbe.queryCount()).isEqualTo(1);
+    }
+
+    @DisplayName("신청 트랜잭션이 롤백되면 캐시는 지워지지 않는다")
+    @Test
+    void rolledBackEnrollDoesNotEvictCache() {
+        restTemplate.getForEntity("/api/studies/popular", List.class);
+        assertThat(cache().get(PopularStudyService.CACHE_KEY)).isNotNull();
+        Long studyId = saveStudyId();
+        Long memberId = saveMemberId();
+
+        transactionTemplate.executeWithoutResult(status -> {
+            enrollmentService.enroll(studyId, memberId);
+            status.setRollbackOnly();
+        });
+
+        assertThat(cache().get(PopularStudyService.CACHE_KEY)).isNotNull();
+    }
+
+    @DisplayName("캐시가 빈 순간 동시 요청 30건이 몰려도 DB 조회는 1건이다 (sync = true)")
+    @Test
+    void concurrentMissesHitDatabaseOnce() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
+        CountDownLatch ready = new CountDownLatch(THREAD_COUNT);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<?>> futures = new ArrayList<>();
+
+        queryCountProbe.reset();
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            futures.add(executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return popularStudyService.popular();
+            }));
+        }
+        ready.await();
+        start.countDown();
+        for (Future<?> future : futures) {
+            future.get(10, TimeUnit.SECONDS);
+        }
+        executor.shutdown();
+
+        assertThat(queryCountProbe.queryCount()).isEqualTo(1);
+    }
+
+    private Cache cache() {
+        return cacheManager.getCache(PopularStudyService.CACHE_NAME);
+    }
+
+    private Long saveStudyId() {
+        return studyRepository.save(new Study("캐시 테스트 스터디", "BACKEND", 10000, 5, LocalDateTime.now())).getId();
+    }
+
+    private Long saveMemberId() {
+        // 테스트 데이터는 롤백되지 않고 쌓이므로 email은 매번 유일한 값으로 만든다.
+        return memberRepository.save(
+                new Member("cache-" + UUID.randomUUID() + "@studypass.test", "캐시테스트회원")).getId();
+    }
+}
+```
+
+테스트 yml이 `src/main`의 `application.yml`을 대신하므로 `cache-names`와 `enable-statistics`는 테스트에서 적용되지 않는다. 이때 폴백 캐시는 필요할 때 캐시를 만드는 방식이라 위 테스트는 그대로 동작해야 한다. 기대 결과는 `sync = true`에서 4번 테스트가 통과하는 것이고, `sync`를 지우면 4번이 실패하면서 조회 수가 1보다 크게 나오는 것이다. 이 "실패 출력"이 6단계의 방지 전 기록이다.
 
 ## 작업 순서 요약
 
